@@ -1,0 +1,440 @@
+/* Professional Dark Mode - Main Colors Only */
+.dark {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+/* SVG Dark Mode Variables */
+:root {
+  --svg-bg-light: #f0fdf4;
+  --svg-bg-dark: #1a1a1a;
+  --svg-face-light: #f0fdf4;
+  --svg-face-dark: #f8fafc;
+  --svg-eyes-light: #374151;
+  --svg-eyes-dark: #1f2937;
+  --svg-text-emerald-light: #f0fdf4;
+  --svg-text-emerald-dark: #f8fafc;
+  --svg-emerald-light: #10b981;
+  --svg-emerald-dark: #34d399;
+  --svg-gray-light: #6b7280;
+  --svg-gray-dark: #e5e7eb;
+}
+
+.dark {
+  --svg-bg: var(--svg-bg-dark);
+  --svg-face: var(--svg-face-dark);
+  --svg-eyes: var(--svg-eyes-dark);
+  --svg-text-emerald: var(--svg-text-emerald-dark);
+  --svg-emerald: var(--svg-emerald-dark);
+  --svg-gray: var(--svg-gray-dark);
+}
+
+:not(.dark) {
+  --svg-bg: var(--svg-bg-light);
+  --svg-face: var(--svg-face-light);
+  --svg-eyes: var(--svg-eyes-light);
+  --svg-text-emerald: var(--svg-text-emerald-light);
+  --svg-emerald: var(--svg-emerald-light);
+  --svg-gray: var(--svg-gray-light);
+}
+
+/* Main backgrounds */
+.dark body,
+.dark #__nuxt,
+.dark .min-h-screen {
+  background-color: #0f172a !important;
+}
+
+/* Cards - simplified to main colors */
+.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+/* Keep only green colored backgrounds */
+.dark .bg-green-50 { 
+  background-color: #166534 !important; 
+  color: #ffffff !important;
+}
+
+/* Override ALL other colored backgrounds - use main colors */
+.dark .bg-blue-50,
+.dark .bg-yellow-50,
+.dark .bg-purple-50,
+.dark .bg-red-50,
+.dark .bg-gray-50 { 
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+/* Override colored borders */
+.dark .border-green-100,
+.dark .border-blue-100,
+.dark .border-yellow-100,
+.dark .border-purple-100,
+.dark .border-red-100,
+.dark .border-gray-100 {
+  border-color: #334155 !important;
+}
+
+/* Professional borders */
+.dark .border,
+.dark .border-gray-200,
+.dark .border-gray-300 {
+  border-color: #334155 !important;
+}
+
+/* Subtle shadows */
+.dark .shadow,
+.dark .shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Icon visibility */
+.dark svg,
+.dark .icon,
+.dark [class*="heroicons"] {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Search icon specific styling - override the above for search icons */
+.dark .relative input[type="search"] + svg,
+.dark .search-icon {
+  color: #d1d5db !important;
+  stroke: #d1d5db !important;
+}
+
+/* Force all text to be visible */
+.dark *:not(svg) {
+  color: #f1f5f9 !important;
+}
+
+/* Preserve red error text in dark mode */
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700 {
+  color: #ef4444 !important;
+}
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover {
+  background-color: #475569 !important;
+}
+
+/* Buttons - use green for all colored buttons */
+.dark button[class*="bg-blue"],
+.dark button[class*="bg-red"],
+.dark button[class*="bg-yellow"],
+.dark button[class*="bg-purple"],
+.dark button[class*="bg-orange"],
+.dark button[class*="bg-indigo"],
+.dark .btn-primary,
+.dark .btn-blue,
+.dark .btn-red,
+.dark .btn-yellow,
+.dark .btn-purple,
+.dark .btn-orange {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+  color: white !important;
+}
+
+.dark button[class*="bg-blue"]:hover,
+.dark button[class*="bg-red"]:hover,
+.dark button[class*="bg-yellow"]:hover,
+.dark button[class*="bg-purple"]:hover,
+.dark button[class*="bg-orange"]:hover,
+.dark .btn-primary:hover,
+.dark .btn-blue:hover,
+.dark .btn-red:hover,
+.dark .btn-yellow:hover,
+.dark .btn-purple:hover,
+.dark .btn-orange:hover {
+  background-color: #15803d !important;
+  border-color: #15803d !important;
+}
+
+/* Override ALL blue colors system-wide */
+.dark .text-blue-50,
+.dark .text-blue-100,
+.dark .text-blue-200,
+.dark .text-blue-300,
+.dark .text-blue-400,
+.dark .text-blue-500,
+.dark .text-blue-600,
+.dark .text-blue-700,
+.dark .text-blue-800,
+.dark .text-blue-900,
+.dark .bg-blue-50,
+.dark .bg-blue-100,
+.dark .bg-blue-200,
+.dark .bg-blue-300,
+.dark .bg-blue-400,
+.dark .bg-blue-500,
+.dark .bg-blue-600,
+.dark .bg-blue-700,
+.dark .bg-blue-800,
+.dark .bg-blue-900,
+.dark .border-blue-50,
+.dark .border-blue-100,
+.dark .border-blue-200,
+.dark .border-blue-300,
+.dark .border-blue-400,
+.dark .border-blue-500,
+.dark .border-blue-600,
+.dark .border-blue-700,
+.dark .border-blue-800,
+.dark .border-blue-900 {
+  color: #ffffff !important;
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* FORCE sidebar links to be white in dark mode */
+.dark nav a,
+.dark nav .nuxt-link,
+.dark .sidebar a,
+.dark .sidebar .nuxt-link,
+.dark .navigation a,
+.dark .navigation .nuxt-link {
+  color: #ffffff !important;
+}
+
+/* FORCE all navigation text to be white */
+.dark nav *,
+.dark .sidebar *,
+.dark .navigation * {
+  color: #ffffff !important;
+}
+
+/* Override router-link colors specifically */
+.dark .router-link-active,
+.dark .router-link-exact-active,
+.dark .nuxt-link-active,
+.dark .nuxt-link-exact-active {
+  color: #ffffff !important;
+}
+
+/* Form elements - enhanced visibility in dark mode */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #16a34a !important;
+  border-width: 2px !important;
+}
+
+/* Form focus states - bright highlight */
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  background-color: #475569 !important;
+  border-color: #16a34a !important;
+  outline: none !important;
+}
+
+/* Placeholder text - more visible */
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+/* Form labels - white and bold */
+.dark label,
+.dark .form-label {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* UInput and UTextarea components */
+.dark [class*="UInput"],
+.dark [class*="UTextarea"],
+.dark [class*="USelect"] {
+  background-color: #334155 !important;
+  color: #f1f5f9 !important;
+  border-color: #16a34a !important;
+  border-width: 2px !important;
+}
+
+.dark [class*="UInput"]:focus,
+.dark [class*="UTextarea"]:focus,
+.dark [class*="USelect"]:focus {
+  background-color: #475569 !important;
+  border-color: #16a34a !important;
+}
+
+/* Light mode - force all buttons to use green */
+button[class*="bg-blue"],
+button[class*="bg-red"],
+button[class*="bg-yellow"],
+button[class*="bg-purple"],
+button[class*="bg-orange"],
+[class*="UButton"],
+.btn-primary,
+.btn-blue,
+.btn-red,
+.btn-yellow,
+.btn-purple {
+  background-color: #16a34a !important;
+  border-color: #16a34a !important;
+  color: white !important;
+}
+
+button[class*="bg-blue"]:hover,
+button[class*="bg-red"]:hover,
+button[class*="bg-yellow"]:hover,
+button[class*="bg-purple"]:hover,
+button[class*="bg-orange"]:hover,
+[class*="UButton"]:hover,
+.btn-primary:hover,
+.btn-blue:hover,
+.btn-red:hover,
+.btn-yellow:hover,
+.btn-purple:hover {
+  background-color: #15803d !important;
+  border-color: #15803d !important;
+}
+
+/* Light mode - override blue text colors to use green/black */
+.text-blue-50,
+.text-blue-100,
+.text-blue-200,
+.text-blue-300,
+.text-blue-400,
+.text-blue-500,
+.text-blue-600,
+.text-blue-700,
+.text-blue-800,
+.text-blue-900 {
+  color: #16a34a !important;
+}
+
+/* Light mode - main text should be black */
+body,
+html,
+.text-gray-900,
+.text-gray-800,
+.text-gray-700 {
+  color: #000000 !important;
+}
+
+/* Override light green colors in dark mode */
+.dark .bg-green-600 {
+  background-color: #16a34a !important;
+}
+
+.dark .hover\:bg-green-700:hover {
+  background-color: #15803d !important;
+}
+
+.dark button {
+  color: #f1f5f9 !important;
+}
+
+.dark a {
+  color: #60a5fa !important;
+}
+
+/* Footer links - use emerald color */
+.dark footer a {
+  color: #059669 !important;
+}
+
+.dark footer a:hover {
+  color: #10b981 !important;
+}
+
+/* SVG Dark Mode Styles */
+.dark svg * {
+  stroke: none !important;
+}
+
+/* Search icon exception - allow stroke for search icons */
+.dark .relative input[type="search"] ~ svg *,
+.dark .search-icon * {
+  stroke: #d1d5db !important;
+}
+.dark .svg-emerald { 
+  fill: #34d399; 
+  stroke: none; 
+}
+.dark .svg-text { 
+  fill: #f3f4f6; 
+  font-weight: 500;
+}
+.dark .svg-bg { 
+  fill: #0f172a;
+  stroke: none;
+}
+.dark .svg-face { 
+  fill: #ffffff; 
+}
+.dark .svg-eyes { 
+  fill: #1f2937; 
+}
+.dark .svg-grow-bg { 
+  fill: #065f46; 
+  stroke: none; 
+}
+.svg-emerald { 
+  fill: #10b981; 
+  stroke: #10b981; 
+}
+.svg-text { 
+  fill: #34d399; 
+  font-weight: 500;
+}
+.svg-bg { 
+  fill: #ffffff; 
+}
+.svg-face { 
+  fill: #ffffff; 
+}
+.svg-eyes { 
+  fill: #374151; 
+}
+.svg-grow-bg { 
+  fill: #6ee7b7; 
+  stroke: #6ee7b7; 
+}
+
+/* Better text readability in dark mode */
+.dark text {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Light mode text improvements */
+text {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

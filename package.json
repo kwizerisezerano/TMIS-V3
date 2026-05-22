@@ -1,0 +1,32 @@
+{
+  "name": "ikimina-project",
+  "version": "1.0.0",
+  "description": "Digital Tontine Management System with Real-time Payment Integration",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
+    "start-backend": "cd backend && npm run dev",
+    "start-frontend": "cd frontend && npm start",
+    "start": "cd backend && npm start",
+    "migrate": "cd backend && npm run migrate",
+    "build": "cd frontend && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "tontine",
+    "savings",
+    "payment",
+    "real-time",
+    "nodejs",
+    "react"
+  ],
+  "author": "Ikimina Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/ikimina-project.git"
+  }
+}

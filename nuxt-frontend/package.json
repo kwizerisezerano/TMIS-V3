@@ -1,0 +1,24 @@
+{
+  "name": "ikimina-nuxt",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "latest",
+    "nuxt": "^3.11.0"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^2.11.1",
+    "@pinia/nuxt": "^0.5.1",
+    "axios": "^1.6.2",
+    "chart.js": "^4.5.1",
+    "jspdf": "^4.0.0",
+    "pinia": "^2.1.7",
+    "socket.io-client": "^4.8.3",
+    "vue-chartjs": "^5.3.3"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "name": "tmis-backend-tests",
+  "version": "1.0.0",
+  "description": "Comprehensive test suite for TMIS backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/scripts/run-tests.js",
+    "test:watch": "node tests/scripts/run-tests.js --watch",
+    "test:coverage": "node tests/scripts/run-tests.js --coverage",
+    "test:ci": "node tests/scripts/run-tests.js --coverage",
+    "test:controllers": "node tests/scripts/run-tests.js tests/controllers",
+    "test:utils": "node tests/scripts/run-tests.js tests/utils",
+    "test:integration": "node tests/scripts/run-tests.js tests/integration",
+    "test:middleware": "node tests/scripts/run-tests.js tests/middleware",
+    "test:auth": "node tests/scripts/run-tests.js tests/controllers/authController.test.js",
+    "test:applications": "node tests/scripts/run-tests.js tests/controllers/applicationsController.test.js",
+    "test:users": "node tests/scripts/run-tests.js tests/controllers/usersController.test.js",
+    "test:tontines": "node tests/scripts/run-tests.js tests/controllers/tontinesController.test.js",
+    "test:contributions": "node tests/scripts/run-tests.js tests/controllers/contributionsController.test.js",
+    "test:loans": "node tests/scripts/run-tests.js tests/controllers/loansController.test.js",
+    "test:payments": "node tests/scripts/run-tests.js tests/controllers/paymentsController.test.js",
+    "test:meetings": "node tests/scripts/run-tests.js tests/controllers/meetingsController.test.js",
+    "test:members": "node tests/scripts/run-tests.js tests/controllers/membersController.test.js",
+    "test:penalties": "node tests/scripts/run-tests.js tests/controllers/penaltiesController.test.js",
+    "test:notifications": "node tests/scripts/run-tests.js tests/controllers/notificationsController.test.js",
+    "test:clean-db": "node tests/scripts/cleanup-test-db.js",
+    "test:setup": "node tests/setup.js",
+    "test:clean": "node tests/cleanup.js",
+    "lint": "eslint tests/",
+    "lint:fix": "eslint tests/ --fix"
+  },
+  "dependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "mysql2": "^3.6.5",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/supertest": "^2.0.16",
+    "eslint": "^8.55.0",
+    "eslint-config-jest": "^6.0.0",
+    "nodemon": "^3.0.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup/jest.setup.js"],
+    "collectCoverageFrom": [
+      "controllers/**/*.js",
+      "utils/**/*.js",
+      "routes/**/*.js",
+      "middleware/**/*.js",
+      "!**/node_modules/**",
+      "!**/tests/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  },
+  "keywords": [
+    "tmis",
+    "tontine",
+    "microfinance",
+    "testing",
+    "jest",
+    "backend"
+  ],
+  "author": "TMIS Development Team",
+  "license": "MIT"
+}
