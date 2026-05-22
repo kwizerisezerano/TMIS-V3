@@ -101,7 +101,7 @@ A professional, modern Node.js + Nuxt 3 application for managing "The Future" to
 3. **Run database migrations**:
    - This creates all tables and seeds initial data (users, tontine, etc.)
    ```bash
-   node migrations/setup.js
+   npm run migrate
    ```
 
 4. **Start backend server**:
