@@ -138,9 +138,9 @@ A professional, modern Node.js + Nuxt 3 application for managing "The Future" to
 
 | Name | Email | Password | Role |
 |------|-------|----------|------|
-| NDAGIJIMANA Florien | florien.ndagijimana@example.com | password123 | Admin/President |
-| Dr. Athanase HATEGEKIMANA | athanase.hategekimana@example.com | password123 | Admin/President |
-| NIYONGOMBWA Didier | akayezuberna@gmail.com | password123 | Accountant |
+| NDAGIJIMANA Florien | florien.ndagijimana@example.com | future2024 | Admin/President |
+| Dr. Athanase HATEGEKIMANA | athanase.hategekimana@example.com | future2024 | Admin/President |
+| NIYONGOMBWA Didier | akayezuberna@gmail.com | future2024 | Accountant |
 
 1. Open **http://localhost:3000** in your browser
 2. Login with any of the admin accounts above
