@@ -153,10 +153,14 @@ const getStatusSelectClass = (status) => {
 const fetchData = async () => {
   loading.value = true
   const { api } = useApi()
+  console.log('=== PAGE PARAMETERS ===')
+  console.log('route.params.tontineId:', route.params.tontineId)
+  console.log('tontineId variable:', tontineId)
   try {
     // 1. Fetch tontine details
     const tontineResponse = await api(`/v1/tontines/${tontineId}`)
     tontine.value = tontineResponse.data || tontineResponse
+    console.log('Tontine data:', tontine.value)
     
     if (!tontine.value) {
       toast.add({ title: 'Error', description: 'Tontine not found', color: 'red' })
@@ -166,11 +170,30 @@ const fetchData = async () => {
 
     // 2. Fetch penalties for this tontine
     const penaltiesResponse = await api(`/v1/penalties/tontine/${tontineId}`)
-    console.log('Penalties API response:', penaltiesResponse)
-    penalties.value = (penaltiesResponse.data || penaltiesResponse || []).filter(p => 
-      p.status === 'pending'
-    )
-    console.log('Filtered penalties:', penalties.value)
+    console.log('=== PENALTIES DEBUG ===')
+    console.log('1. Full penaltiesResponse:', penaltiesResponse)
+    
+    // Try all possible ways to get the penalties array
+    let allPenalties = []
+    if (Array.isArray(penaltiesResponse)) {
+      allPenalties = penaltiesResponse
+    } else if (penaltiesResponse?.data) {
+      if (Array.isArray(penaltiesResponse.data)) {
+        allPenalties = penaltiesResponse.data
+      } else if (penaltiesResponse.data?.penalties) {
+        allPenalties = penaltiesResponse.data.penalties
+      }
+    } else if (penaltiesResponse?.penalties) {
+      allPenalties = penaltiesResponse.penalties
+    }
+    
+    console.log('2. Extracted allPenalties:', allPenalties)
+    penalties.value = allPenalties.filter(p => {
+      const matches = p?.status?.toLowerCase() === 'pending'
+      console.log(`3. Penalty ${p?.id}: status=${p?.status}, matches=${matches}`)
+      return matches
+    })
+    console.log('4. Filtered pending penalties:', penalties.value)
 
     // Map penalties to records
     records.value = penalties.value.map(penalty => {
@@ -186,6 +209,7 @@ const fetchData = async () => {
         notes: ''
       }
     })
+    console.log('5. Final records:', records.value)
   } catch (error) {
     console.error('Error fetching tontine/penalties:', error)
     toast.add({ title: 'Error', description: 'Failed to load details', color: 'red' })

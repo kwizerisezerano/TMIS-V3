@@ -164,6 +164,42 @@ const isDateValid = (date) => {
   return d instanceof Date && !isNaN(d);
 };
 
+// Activity logging utility
+const logActivity = async (db, {
+  userId,
+  actionType,
+  entityType,
+  entityId = null,
+  actionDescription,
+  oldData = null,
+  newData = null,
+  ipAddress = null,
+  userAgent = null
+}) => {
+  try {
+    await db.execute(`
+      INSERT INTO activity_log (
+        user_id, action_type, entity_type, entity_id, 
+        action_description, old_data, new_data, 
+        ip_address, user_agent, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      userId,
+      actionType,
+      entityType,
+      entityId,
+      actionDescription,
+      oldData ? JSON.stringify(oldData) : null,
+      newData ? JSON.stringify(newData) : null,
+      ipAddress,
+      userAgent,
+      getCurrentUTCDate()
+    ]);
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+};
+
 // Generate random codes
 const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -216,6 +252,9 @@ module.exports = {
   getCurrentUTCDate,
   formatDate,
   isDateValid,
+  
+  // Activity logging
+  logActivity,
   
   // Code generators
   generateVerificationCode,

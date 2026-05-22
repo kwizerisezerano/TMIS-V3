@@ -94,6 +94,16 @@ pool.getConnection()
     process.exit(1);
   });
 
+// Add database connection to request object
+app.use((req, res, next) => {
+  req.db = pool;
+  next();
+});
+
+// Activity log middleware - log all POST/PUT/DELETE requests
+const activityLogMiddleware = require('./middleware/activityLogMiddleware');
+app.use(activityLogMiddleware);
+
 // Performance and caching initialization
 const OptimizedQueries = require('./utils/optimizedQueries');
 
@@ -160,6 +170,7 @@ initializeRoute('/api/v1/meetings', require('./routes/v1/meetings'));
 initializeRoute('/api/v1/notifications', require('./routes/v1/notifications'));
 initializeRoute('/api/v1/members', require('./routes/v1/members'));
 initializeRoute('/api/v1/applications', require('./routes/v1/applications'));
+initializeRoute('/api/v1/activity-logs', require('./routes/v1/activityLog'));
 
 // Error handling middleware
 app.use((error, req, res, next) => {

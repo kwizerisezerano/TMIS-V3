@@ -336,14 +336,18 @@ const fetchDashboardData = async () => {
     const contribRes = await api('/v1/contributions', { params: { userId: user.value.id, includeStats: 'true', limit: 10000 } })
     console.log('=== Contribution API Response ===', contribRes)
     let contribData = extractObjectData(contribRes)
-    allContributions.value = Array.isArray(contribData) ? contribData : (contribData.contributions || extractArrayData(contribRes))
+    allContributions.value = Array.isArray(contribData) 
+      ? contribData 
+      : (contribData.contributions || (contribData.data?.contributions) || extractArrayData(contribRes))
     console.log('Fetched contributions:', allContributions.value.length)
     console.log('All contributions data:', JSON.stringify(allContributions.value, null, 2))
 
     // Fetch loans
     const loansRes = await api('/v1/loans', { params: { userId: user.value.id, includeStats: 'true', limit: 10000 } })
     let loansData = extractObjectData(loansRes)
-    allLoans.value = Array.isArray(loansData) ? loansData : (loansData.loans || extractArrayData(loansRes))
+    allLoans.value = Array.isArray(loansData) 
+      ? loansData 
+      : (loansData.loans || (loansData.data?.loans) || extractArrayData(loansRes))
     console.log('Fetched loans:', allLoans.value.length)
 
     // Fetch payments

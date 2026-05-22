@@ -21,7 +21,7 @@ const initPenaltiesRoutes = (db) => {
   router.get('/user/:userId/stats', authMiddleware, penaltiesController.getUserPenaltyStats.bind(penaltiesController));
 
   // Admin routes (protected + admin)
-  router.get('/tontine/:tontineId', adminMiddleware, penaltiesController.getTontinePenalties.bind(penaltiesController));
+  router.get('/tontine/:tontineId', authMiddleware, penaltiesController.getTontinePenalties.bind(penaltiesController));
   router.get('/tontine/:tontineId/stats', adminMiddleware, penaltiesController.getTontinePenaltyStats.bind(penaltiesController));
   router.get('/all', adminMiddleware, penaltiesController.getAllPenalties.bind(penaltiesController));
   router.post('/apply', adminMiddleware, penaltiesController.applyPenalty.bind(penaltiesController));

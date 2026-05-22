@@ -65,6 +65,13 @@
         >
           Tontines
         </button>
+        <button 
+          @click="activeTab = 'activity-logs'"
+          :class="activeTab === 'activity-logs' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'"
+          class="py-2 px-1 border-b-2 font-medium text-sm transition-colors"
+        >
+          Activity Log
+        </button>
       </nav>
     </div>
 
@@ -544,6 +551,67 @@
       </UCard>
     </div>
 
+    <!-- Activity Log Tab -->
+    <div v-if="activeTab === 'activity-logs'">
+      <UCard>
+        <template #header>
+          <h3 class="text-lg font-semibold">System Activity Log</h3>
+        </template>
+
+        <div v-if="activityLogsLoading" class="text-center py-8">
+          <div class="text-gray-500">Loading activity logs...</div>
+        </div>
+
+        <div v-else-if="activityLogs.length === 0" class="text-center py-8">
+          <div class="text-gray-500">No activity logs found</div>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-for="log in activityLogs" :key="log.id" class="hover:bg-gray-50">
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ log.user_name || 'System' }}
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <span :class="getActionTypeClass(log.action_type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ log.action_type }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ log.entity_type }}
+                  <span v-if="log.entity_id" class="text-xs text-gray-500 ml-1">(ID: {{ log.entity_id }})</span>
+                </td>
+                <td class="px-4 py-4 text-sm text-gray-900 max-w-xs truncate" :title="log.action_description">
+                  {{ log.action_description }}
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ formatDateTime(log.created_at) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div v-if="activityLogsPagination && activityLogsPagination.pages > 1" class="mt-4 flex justify-between items-center">
+          <div class="text-sm text-gray-500">
+            Showing {{ (activityLogsPagination.page - 1) * activityLogsPagination.limit + 1 }} to {{ Math.min(activityLogsPagination.page * activityLogsPagination.limit, activityLogsPagination.total) }} of {{ activityLogsPagination.total }} logs
+          </div>
+          <UPagination v-model="activityLogsCurrentPage" :page-count="activityLogsPagination.pages" :total="activityLogsPagination.total" @update:model-value="fetchActivityLogs" />
+        </div>
+      </UCard>
+    </div>
+
     <!-- Add Member Modal -->
     <UModal v-model="showAddModal">
       <UCard>
@@ -765,6 +833,12 @@ const meetingForm = ref({
   status: 'scheduled'
 })
 
+// Activity Log state
+const activityLogs = ref([])
+const activityLogsLoading = ref(false)
+const activityLogsPagination = ref(null)
+const activityLogsCurrentPage = ref(1)
+
 onMounted(() => {
   // Initialize auth state from localStorage before making API calls
   initAuth()
@@ -790,6 +864,59 @@ const fetchActiveTab = (tab = activeTab.value) => {
   if (tab === 'meetings') return fetchMeetings()
   if (tab === 'penalties') return fetchPenalties()
   if (tab === 'tontines') return fetchTontines()
+  if (tab === 'activity-logs') return fetchActivityLogs()
+}
+
+const fetchActivityLogs = async (page = activityLogsCurrentPage.value) => {
+  activityLogsLoading.value = true
+  const { api } = useApi()
+  try {
+    console.log('=== FETCH ACTIVITY LOGS ===')
+    const response = await api('/v1/activity-logs', { params: { page, limit: 20 } })
+    console.log('Full activity logs response:', response)
+    
+    // Handle all possible nested response structures
+    let responseData = response
+    if (response?.data) responseData = response.data
+    if (responseData?.data) responseData = responseData.data
+    
+    console.log('Extracted responseData:', responseData)
+    
+    activityLogs.value = responseData?.logs || []
+    activityLogsPagination.value = responseData?.pagination || null
+    console.log('Final activityLogs:', activityLogs.value)
+    console.log('Final activityLogsPagination:', activityLogsPagination.value)
+  } catch (error) {
+    console.error('Error fetching activity logs:', error)
+    activityLogs.value = []
+  } finally {
+    activityLogsLoading.value = false
+  }
+}
+
+const getActionTypeClass = (actionType) => {
+  switch (actionType) {
+    case 'POST':
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+    case 'PUT':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+    case 'DELETE':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+  }
+}
+
+const formatDateTime = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const fetchMembers = async () => {
@@ -1251,19 +1378,6 @@ const fetchMeetings = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const formatDateTime = (dateString) => {
-  if (!dateString) return 'Not set'
-  const d = new Date(dateString)
-  if (isNaN(d.getTime())) return 'Invalid Date'
-  return d.toLocaleString('en-RW', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 const openCreateMeetingModal = () => {

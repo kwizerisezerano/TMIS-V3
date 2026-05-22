@@ -304,6 +304,30 @@ async function setupDatabase() {
     `);
     console.log('Meeting attendance table created');
 
+    // Create activity_log table to track all PUT/POST actions
+    await connection.execute(`
+      CREATE TABLE activity_log (
+        id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) DEFAULT NULL,
+        action_type ENUM('POST', 'PUT', 'DELETE') NOT NULL,
+        entity_type VARCHAR(100) NOT NULL,
+        entity_id INT(11) DEFAULT NULL,
+        action_description TEXT NOT NULL,
+        old_data TEXT,
+        new_data TEXT,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_action_type (action_type),
+        INDEX idx_entity_type (entity_type),
+        INDEX idx_created_at (created_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+    console.log('Activity log table created');
+
     // Insert default users from The Future leadership
     // Use bcrypt for password hashing (secure one-way hash)
     const bcrypt = require('bcryptjs');

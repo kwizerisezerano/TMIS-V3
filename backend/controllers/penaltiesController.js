@@ -129,6 +129,9 @@ class PenaltiesController {
     try {
       const { tontineId } = req.params;
 
+      console.log('=== BACKEND getTontinePenalties DEBUG ===');
+      console.log('tontineId:', tontineId);
+
       // Validate tontineId
       if (!tontineId || isNaN(tontineId)) {
         return res.status(400).json(ERROR_RESPONSES.validation('Valid tontine ID is required'));
@@ -142,6 +145,8 @@ class PenaltiesController {
         WHERE p.tontine_id = ? 
         ORDER BY p.created_at DESC
       `, [tontineId]);
+
+      console.log('Raw penalties from DB:', penalties);
 
       // Decrypt user data
       const { decryptUserData } = require('../utils/encryption');
@@ -160,6 +165,9 @@ class PenaltiesController {
           return penalty;
         }
       });
+
+      console.log('Decrypted penalties:', decryptedPenalties);
+      console.log('Returning response:', SUCCESS_RESPONSES.ok(decryptedPenalties));
 
       return res.json(SUCCESS_RESPONSES.ok(decryptedPenalties));
 
