@@ -166,6 +166,7 @@
 <script setup>
 import { io } from 'socket.io-client'
 
+const { user, initAuth } = useAuth()
 const showPaymentModal = ref(false)
 const paymentLoading = ref(false)
 const paymentMethod = ref('mobile_money')
@@ -173,7 +174,6 @@ const phoneNumber = ref('')
 const loading = ref(true)
 const loadingTontines = ref(true)
 const contributions = ref([])
-const user = ref(null)
 const selectedTontine = ref(null)
 const userTontines = ref([])
 const monthlyAmount = ref(20000)
@@ -388,9 +388,8 @@ const joinSocketRooms = () => {
 // Get user data and fetch contributions
 onMounted(async () => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+    initAuth()
+    if (user.value) {
       await fetchUserTontines()
       
       // Auto-select tontine from URL parameter

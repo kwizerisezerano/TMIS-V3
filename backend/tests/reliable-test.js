@@ -17,6 +17,8 @@ const {
   STATUS
 } = require('../utils/common');
 
+const MONEY_DECIMAL = 'DECIMAL(65,2)';
+
 // Test configuration
 const TEST_DB_CONFIG = {
   host: 'localhost',
@@ -84,7 +86,7 @@ async function cleanAndSetupDatabase() {
         description TEXT,
         president_id INT NOT NULL,
         max_members INT NOT NULL DEFAULT 10,
-        contribution_amount DECIMAL(10,2) NOT NULL,
+        contribution_amount ${MONEY_DECIMAL} NOT NULL,
         frequency ENUM('daily', 'weekly', 'monthly') DEFAULT 'monthly',
         status ENUM('active', 'inactive', 'completed') DEFAULT 'active',
         start_date DATE NOT NULL,

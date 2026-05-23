@@ -205,6 +205,7 @@ input[type="checkbox"]:checked {
 
 <script setup>
 const router = useRouter()
+const { login } = useAuth()
 
 const form = reactive({
   email: '',
@@ -280,61 +281,16 @@ const handleLogin = async () => {
   successMessage.value = ''
   
   try {
-    const response = await fetch('http://localhost:3300/api/v1/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: form.email.trim(),
-        password: form.password
-      })
-    })
-    
-    // Safely parse response - handle non-JSON errors
-    const responseText = await response.text()
-    let data
-    try {
-      data = JSON.parse(responseText)
-    } catch (e) {
-      data = { success: false, message: responseText || 'Server error occurred' }
-    }
-    
-    console.log('Full login response:', data)
-    
-    // Tokens are inside data.data due to SUCCESS_RESPONSES wrapper
-    const responseData = data.data || data
-    const accessToken = responseData.accessToken
-    const refreshToken = responseData.refreshToken
-    const user = responseData.user
-    
-    console.log('Extracted:', { hasToken: !!accessToken, hasRefresh: !!refreshToken, hasUser: !!user })
-    
-    if (response.ok && data.success && accessToken) {
-      localStorage.setItem('accessToken', accessToken)
-      localStorage.setItem('refreshToken', refreshToken)
-      localStorage.setItem('user', JSON.stringify(user))
-      
-      successMessage.value = `Welcome back, ${user.names}!`
-      console.log('Login successful, redirecting to dashboard...')
-      
-      // Redirect after showing success message
-      setTimeout(() => {
-        console.log('Executing redirect...')
-        router.push('/dashboard')
-      }, 1000)
-    } else {
-      // Show error message from backend
-      errorMessage.value = data.message || 'Invalid credentials. Please try again.'
-      
-      if (data.requiresVerification) {
-        errorMessage.value = 'Please verify your email before logging in.'
-      }
-    }
-    
+    const authData = await login(form.email.trim(), form.password)
+
+    successMessage.value = `Welcome back, ${authData.user.names}!`
+
+    setTimeout(() => {
+      router.push('/dashboard')
+    }, 1000)
   } catch (error) {
     console.error('Login error:', error)
-    errorMessage.value = 'Unable to connect to server. Please try again.'
+    errorMessage.value = error?.data?.message || error?.message || 'Unable to connect to server. Please try again.'
   } finally {
     loading.value = false
   }

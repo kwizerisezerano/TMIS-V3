@@ -24,7 +24,7 @@
         </UFormGroup>
         
         <UFormGroup label="Monthly Contribution Amount (RWF)" required>
-          <UInput v-model="formData.contribution_amount" type="number" placeholder="20000" :disabled="Boolean(success)" />
+          <CurrencyInput v-model="formData.contribution_amount" placeholder="20000" :disabled="Boolean(success)" />
         </UFormGroup>
         
         <UFormGroup label="Maximum Members" required>

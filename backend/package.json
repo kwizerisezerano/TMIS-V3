@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node migrations/setup.js",
-    "setup": "node migrations/setup.js && echo Database setup completed!"
+    "migrate:precision": "node migrations/increaseAmountPrecision.js",
+    "setup": "node migrations/setup.js && node migrations/increaseAmountPrecision.js && echo Database setup completed!"
   },
   "dependencies": {
     "axios": "^1.6.2",

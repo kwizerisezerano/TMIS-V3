@@ -2,12 +2,16 @@
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const MONEY_DECIMAL = 'DECIMAL(65,2)';
+
 const dbConfig = {
   host: 'localhost',
   port: 3306,
   user: 'root',
   password: '',
-  database: 'ikimina_db'
+  database: 'ikimina_db',
+  supportBigNumbers: true,
+  bigNumberStrings: true
 };
 
 async function setupDatabase() {
@@ -68,7 +72,7 @@ async function setupDatabase() {
         id int(11) NOT NULL AUTO_INCREMENT,
         name varchar(255) NOT NULL,
         description text,
-        contribution_amount decimal(10,2) NOT NULL DEFAULT 20000.00,
+        contribution_amount ${MONEY_DECIMAL} NOT NULL DEFAULT 20000.00,
         contribution_frequency varchar(50) NOT NULL DEFAULT 'monthly',
         max_members int(11) NOT NULL DEFAULT 20,
         creator_id int(11) NOT NULL,
@@ -109,7 +113,7 @@ async function setupDatabase() {
         id int(11) NOT NULL AUTO_INCREMENT,
         user_id int(11) NOT NULL,
         tontine_id int(11) NOT NULL,
-        amount decimal(10,2) NOT NULL DEFAULT 20000.00,
+        amount ${MONEY_DECIMAL} NOT NULL DEFAULT 20000.00,
         payment_method varchar(100) NOT NULL DEFAULT 'mobile_money',
         contribution_date date DEFAULT (curdate()),
         transaction_ref varchar(255) NOT NULL,
@@ -130,9 +134,9 @@ async function setupDatabase() {
         id int(11) NOT NULL AUTO_INCREMENT,
         user_id int(11) NOT NULL,
         tontine_id int(11) NOT NULL,
-        amount decimal(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         interest_rate decimal(5,2) NOT NULL DEFAULT 1.70,
-        total_amount decimal(10,2) NOT NULL,
+        total_amount ${MONEY_DECIMAL} NOT NULL,
         repayment_period int DEFAULT 6,
         due_date date DEFAULT NULL,
         phone_number varchar(20) NOT NULL,
@@ -155,7 +159,7 @@ async function setupDatabase() {
         tontine_id int(11) DEFAULT NULL,
         loan_id int(11) DEFAULT NULL,
         payment_type enum('contribution','loan_payment','penalty','other') DEFAULT 'contribution',
-        amount decimal(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         payment_method varchar(100) DEFAULT 'mobile_money',
         payment_data text DEFAULT NULL,
         status enum('pending','completed','failed','cancelled') DEFAULT 'pending',
@@ -215,7 +219,7 @@ async function setupDatabase() {
         user_id int(11) NOT NULL,
         tontine_id int(11) NOT NULL,
         type varchar(50) NOT NULL,
-        amount decimal(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         reason text NOT NULL,
         status enum('pending','paid','waived') DEFAULT 'pending',
         paid_at timestamp NULL,
@@ -313,6 +317,8 @@ async function setupDatabase() {
         entity_type VARCHAR(100) NOT NULL,
         entity_id INT(11) DEFAULT NULL,
         action_description TEXT NOT NULL,
+        status ENUM('success', 'failure') NOT NULL DEFAULT 'success',
+        response_status_code INT(11) DEFAULT NULL,
         old_data TEXT,
         new_data TEXT,
         ip_address VARCHAR(45),

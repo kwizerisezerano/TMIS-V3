@@ -18,7 +18,7 @@
         </div>
         <div class="bg-white/20 p-3 rounded">
           <p class="text-sm">Total Saved (All Tontines)</p>
-          <p class="text-xl font-bold">{{ totalSaved.toLocaleString() }} RWF</p>
+          <p class="text-xl font-bold">{{ formatDashboardAmount(totalSaved) }}</p>
         </div>
       </div>
     </div>
@@ -67,7 +67,7 @@
             <UButton @click="navigateTo(`/tontine-details?id=${tontine.id}`)" size="xs" class="flex-1">
               View Details
             </UButton>
-            <UButton @click="navigateTo(`/manage?tontine=${tontine.id}`)" v-if="user?.role === 'admin'" size="xs" color="green" variant="outline">
+            <UButton @click="navigateTo(`/manage?tontine=${tontine.id}`)" v-if="canManageSelectedTontine" size="xs" color="green" variant="outline">
               Manage
             </UButton>
           </div>
@@ -86,11 +86,11 @@
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Total Saved:</span>
-            <span class="font-semibold text-green-600">{{ getTontineSavings(tontine.id).toLocaleString() }} RWF</span>
+            <span class="font-semibold text-green-600">{{ formatCurrency(getTontineSavings(tontine.id)) }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Available Loan:</span>
-            <span class="font-semibold text-purple-600">{{ Math.floor(getTontineSavings(tontine.id) * 2 / 3).toLocaleString() }} RWF</span>
+            <span class="font-semibold text-purple-600">{{ formatCurrency(Math.floor(getTontineSavings(tontine.id) * 2 / 3)) }}</span>
           </div>
           <div class="flex justify-between">
             <span class="text-gray-600">Performance:</span>
@@ -116,19 +116,11 @@
         </div>
       </UCard>
 
-      <UCard>
-        <template #header>
-          <h3 class="font-semibold flex items-center gap-2">
-            <Icon name="i-heroicons-banknotes" class="w-5 h-5 text-blue-600" />
-            Available Loans
-          </h3>
-        </template>
-        
-        <div class="text-center">
-          <p class="text-xl font-bold text-blue-600">{{ maxLoanAmount.toLocaleString() }} RWF</p>
-          <p class="text-sm text-gray-600">Max Available (All Tontines)</p>
-        </div>
-      </UCard>
+      <div class="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border flex flex-col items-center justify-center">
+        <p class="text-sm text-green-700 font-medium">Max Loan Eligibility</p>
+        <p class="text-xl font-bold text-blue-600">{{ formatDashboardAmount(maxLoanAmount) }}</p>
+        <p class="text-sm text-gray-600">Max Available (All Tontines)</p>
+      </div>
 
       <UCard>
         <template #header>
@@ -148,8 +140,11 @@
 </template>
 
 <script setup>
-const { user } = useAuth()
+import { canManageTontine } from '~/utils/authGuard'
+
+const { user, initAuth } = useAuth()
 const { api } = useApi()
+const { formatDashboardAmount, formatCurrency } = useCurrency()
 
 const loading = ref(true)
 const userTontines = ref([])
@@ -167,6 +162,8 @@ const performanceScore = computed(() => {
 const totalShares = computed(() => {
   return userTontines.value.reduce((sum, tontine) => sum + (tontine.user_shares || 1), 0)
 })
+
+const canManageSelectedTontine = computed(() => canManageTontine(user.value))
 
 onMounted(async () => {
   await fetchUserTontines()

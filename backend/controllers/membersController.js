@@ -10,8 +10,8 @@ const {
   getCurrentUTCDate
 } = require('../utils/common');
 const { decryptUserData } = require('../utils/encryption');
-const { calculateNewMemberEntryFee, THE_FUTURE_CONFIG } = require('../utils/theFutureConfig');
-const { sendNewMemberEmail, sendNewMemberAdminNotification } = require('../utils/email');
+const { THE_FUTURE_CONFIG } = require('../utils/theFutureConfig');
+const { notifyMemberAddedToTontine } = require('../utils/memberNotificationHelpers');
 
 class MembersController {
   constructor(db) {
@@ -138,120 +138,21 @@ class MembersController {
         return res.status(400).json(ERROR_RESPONSES.validation('Tontine is full'));
       }
 
-      // Calculate new member entry fee (Article 27)
-      const [totalContributions] = await this.db.execute(
-        'SELECT COALESCE(SUM(amount), 0) as total FROM contributions WHERE tontine_id = ? AND payment_status = ?',
-        [tontineId, 'Approved']
-      );
-      
-      const accumulatedShares = parseFloat(totalContributions[0].total) || 0;
-      const entryFeeCalculation = calculateNewMemberEntryFee(accumulatedShares);
-
       // Add membership request (auto-approve for now)
       const [result] = await this.db.execute(`
         INSERT INTO tontine_members (tontine_id, user_id, shares, status, created_at) 
         VALUES (?, ?, ?, ?, ?)
       `, [tontineId, finalUserId, shares, 'approved', getCurrentUTCDate()]);
 
-      // Get the new member's information
-      const [newMember] = await this.db.execute(
-        'SELECT id, names, email FROM users WHERE id = ?',
-        [finalUserId]
-      );
-
-      const memberData = newMember.length > 0 ? newMember[0] : { names: 'Member', email: '' };
-      
-      // Decrypt member data if needed
-      let decryptedMember = memberData;
-      try {
-        decryptedMember = decryptUserData(memberData);
-      } catch (e) {}
-
-      // Create IN-APP notification for user with entry fee information
-      const entryFeeNote = entryFeeCalculation.entryFee === 0 
-        ? ' (No accumulated contributions yet)' 
-        : '';
-      const paymentNote = entryFeeCalculation.entryFee === 0 
-        ? ' You can start making your monthly contributions!' 
-        : ' Please contact the Executive Committee for payment details.';
-      
-      await this.db.execute(`
-        INSERT INTO notifications (user_id, title, message, type, created_at) 
-        VALUES (?, ?, ?, ?, ?)
-      `, [
-        finalUserId,
-        'Joined Tontine',
-        `You have successfully joined "${tontine[0].name}". Entry fee: RWF ${parseFloat(entryFeeCalculation.entryFee).toLocaleString()}${entryFeeNote}.${paymentNote}`,
-        'success',
-        getCurrentUTCDate()
-      ]);
-
-      // Get all admin users for email notifications
-      const [adminUsers] = await this.db.execute(
-        'SELECT u.id, u.names, u.email FROM users u WHERE u.role IN (?, ?)',
-        ['admin', 'president']
-      );
-
-      // Create IN-APP notifications for admins with entry fee details
-      const [tontineAdmins] = await this.db.execute(
-        'SELECT user_id FROM tontine_members WHERE tontine_id = ? AND status = ?',
-        [tontineId, 'approved']
-      );
-
-      for (const admin of tontineAdmins) {
-        const adminEntryFeeNote = entryFeeCalculation.entryFee === 0 
-          ? ' (No accumulated contributions yet)' 
-          : '';
-        
-        await this.db.execute(`
-          INSERT INTO notifications (user_id, title, message, type, created_at) 
-          VALUES (?, ?, ?, ?, ?)
-        `, [
-          admin.user_id,
-          'New Member Joined',
-          `${decryptedMember.names} has joined "${tontine[0].name}". Entry fee due: RWF ${parseFloat(entryFeeCalculation.entryFee).toLocaleString()}${adminEntryFeeNote}.`,
-          'info',
-          getCurrentUTCDate()
-        ]);
-      }
-
-      // Send EMAIL notifications
-      try {
-        // Send welcome email to the new member
-        if (decryptedMember.email) {
-          await sendNewMemberEmail(
-            decryptedMember.email,
-            decryptedMember,
-            tontine[0],
-            entryFeeCalculation
-          );
-        }
-
-        // Send admin notification emails
-        for (const adminUser of adminUsers) {
-          let decryptedAdmin = adminUser;
-          try {
-            decryptedAdmin = decryptUserData(adminUser);
-          } catch (e) {}
-          
-          if (decryptedAdmin.email) {
-            await sendNewMemberAdminNotification(
-              decryptedAdmin.email,
-              decryptedMember,
-              tontine[0],
-              entryFeeCalculation
-            );
-          }
-        }
-      } catch (emailError) {
-        console.error('Email notifications failed:', emailError.message);
-        // Don't fail the whole request if email fails - in-app notifications still work
-      }
+      const { entryFee } = await notifyMemberAddedToTontine(this.db, {
+        userId: finalUserId,
+        tontineId
+      });
 
       return res.status(201).json(SUCCESS_RESPONSES.created(
         { 
           membershipId: result.insertId,
-          entryFee: entryFeeCalculation
+          entryFee
         },
         'Successfully joined tontine'
       ));

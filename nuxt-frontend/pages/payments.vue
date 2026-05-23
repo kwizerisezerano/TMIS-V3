@@ -208,12 +208,13 @@
 </template>
 
 <script setup>
+const { user, initAuth } = useAuth()
+
 const activeTab = ref('contributions')
 const loading = ref(true)
 const contributions = ref([])
 const loanPayments = ref([])
 const penaltyPayments = ref([])
-const user = ref(null)
 const userTontines = ref([])
 const selectedTontine = ref(null)
 
@@ -244,9 +245,8 @@ const totalTransactions = computed(() => {
 
 onMounted(async () => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+    initAuth()
+    if (user.value) {
       await fetchPaymentHistory()
     }
   }

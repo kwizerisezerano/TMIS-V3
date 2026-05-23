@@ -182,13 +182,16 @@ class PenaltiesController {
     try {
       const { userId, tontineId, type, amount, reason } = req.body;
 
+      // Support both camelCase and snake_case field names
+      const finalAmount = amount !== undefined ? amount.toString() : null;
+
       // Validate required fields
-      if (!userId || !tontineId || !type || !amount || !reason) {
+      if (!userId || !tontineId || !type || !finalAmount || !reason) {
         return res.status(400).json(ERROR_RESPONSES.validation('All fields are required'));
       }
 
       // Validate amount
-      if (isNaN(amount) || amount <= 0) {
+      if (isNaN(parseFloat(finalAmount)) || parseFloat(finalAmount) <= 0) {
         return res.status(400).json(ERROR_RESPONSES.validation('Valid penalty amount is required'));
       }
 
@@ -206,7 +209,7 @@ class PenaltiesController {
       const [result] = await this.db.execute(`
         INSERT INTO penalties (user_id, tontine_id, type, amount, reason, status, created_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [userId, tontineId, type, amount, reason, STATUS.PENDING, getCurrentUTCDate()]);
+      `, [userId, tontineId, type, finalAmount, reason, STATUS.PENDING, getCurrentUTCDate()]);
 
       // Create notification for user
       await this.db.execute(`
@@ -215,7 +218,7 @@ class PenaltiesController {
       `, [
         userId,
         'New Penalty Applied',
-        `A penalty of RWF ${amount} has been applied to your account. Reason: ${reason}`,
+        `A penalty of RWF ${finalAmount} has been applied to your account. Reason: ${reason}`,
         'penalty',
         getCurrentUTCDate()
       ]);

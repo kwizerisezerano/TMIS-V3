@@ -99,16 +99,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+const { user: currentUser, initAuth } = useAuth()
 const meetings = ref([])
 const userTontines = ref([])
 const selectedTontine = ref(null)
 const loading = ref(false)
-const currentUser = ref(null)
 
 const fetchUserTontines = async () => {
   const { api } = useApi()
   try {
-    currentUser.value = JSON.parse(localStorage.getItem('user'))
+    initAuth()
+    if (!currentUser.value) {
+      userTontines.value = []
+      return
+    }
     const response = await api('/v1/tontines', { params: { userId: currentUser.value.id } })
     const data = response.data || response
     userTontines.value = Array.isArray(data) ? data : (data.data || [])

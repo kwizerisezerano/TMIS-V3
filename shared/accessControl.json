@@ -1,0 +1,36 @@
+{
+  "roles": {
+    "ADMIN": "admin",
+    "PRESIDENT": "president",
+    "MEMBER": "member",
+    "ACCOUNTANT": "accountant"
+  },
+  "roleGroups": {
+    "EXECUTIVE": ["admin", "president"],
+    "PRIVILEGED": ["admin", "president", "accountant"],
+    "ACCOUNTING": ["accountant"]
+  },
+  "accessRules": {
+    "EXECUTIVE_ACTIONS": ["admin", "president"],
+    "PRIVILEGED_PAGES": ["admin", "president", "accountant"],
+    "MEETING_MANAGEMENT": ["admin", "president"],
+    "TRANSACTION_RECORDING": ["accountant"],
+    "TONTINE_DASHBOARD": ["admin", "president"],
+    "TONTINE_MANAGEMENT": ["admin", "president"]
+  },
+  "routes": {
+    "PUBLIC": [
+      "/login",
+      "/register",
+      "/verify-email",
+      "/",
+      "/landing",
+      "/terms",
+      "/apply",
+      "/forgot-password",
+      "/verify-reset-code",
+      "/reset-password"
+    ],
+    "AUTH": ["/login", "/register"]
+  }
+}

@@ -227,13 +227,14 @@
 </template>
 
 <script setup>
+import { USER_ROLES, isAdminOnly } from '~/utils/authGuard'
+
 const loading = ref(false)
 const registerLoading = ref(false)
 const joiningTontine = ref(null)
 const showUserExistsModal = ref(false)
 const showSuccessModal = ref(false)
 const showValidationModal = ref(false)
-const user = ref(null)
 const idNumber = ref('')
 const originalIdNumber = ref('')
 const duplicateUserInfo = ref({ email: '', phone: '' })
@@ -241,26 +242,27 @@ const successUserInfo = ref({ names: '', email: '', phone: '', role: '' })
 const validationErrors = ref([])
 const activeTontines = ref([])
 const joinedTontines = ref(new Set())
+const { user, initAuth } = useAuth()
 const newUser = ref({
   names: '',
   email: '',
   phone: '',
   password: '',
-  role: 'member'
+  role: USER_ROLES.MEMBER
 })
 
 const roleOptions = [
-  { label: 'Member', value: 'member' },
-  { label: 'Admin', value: 'admin' }
+  { label: 'Member', value: USER_ROLES.MEMBER },
+  { label: 'Admin', value: USER_ROLES.ADMIN }
 ]
+
+const unwrapResponse = (response) => response?.data || response
 
 const hasIdNumber = computed(() => {
   return originalIdNumber.value && originalIdNumber.value.length > 0
 })
 
-const isAdmin = computed(() => {
-  return user.value && (user.value.role === 'admin' || user.value.role === 'president')
-})
+const isAdmin = computed(() => isAdminOnly(user.value))
 
 // Use dynamic admin users composable
 const { fetchAdminUsers, isAdminEmail } = useAdminUsers()
@@ -283,9 +285,8 @@ const validatePhone = (phone) => {
 
 onMounted(async () => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+    initAuth()
+    if (user.value) {
       await loadUserProfile()
       if (!isAdmin.value) {
         await loadActiveTontines()
@@ -302,7 +303,7 @@ const loadUserProfile = async () => {
   try {
     // TODO: Backend endpoint /api/v1/auth/users/:userId does not exist
     // Using /api/v1/users/:userId as alternative
-    const userData = await api(`/v1/users/${user.value.id}`)
+    const userData = unwrapResponse(await api(`/v1/users/${user.value.id}`))
     
     originalIdNumber.value = userData.id_number || ''
     idNumber.value = userData.id_number || ''
@@ -321,7 +322,7 @@ const loadUserProfile = async () => {
 const loadActiveTontines = async () => {
   const { api } = useApi()
   try {
-    const tontines = await api('/v1/tontines')
+    const tontines = unwrapResponse(await api('/v1/tontines'))
     
     // Filter active tontines that user hasn't joined
     activeTontines.value = tontines.filter(t => 
@@ -474,7 +475,7 @@ const registerNewUser = async () => {
         email: '',
         phone: '',
         password: '',
-        role: 'member'
+        role: USER_ROLES.MEMBER
       }
       
       // Show success modal

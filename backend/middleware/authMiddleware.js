@@ -4,7 +4,7 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { ERROR_RESPONSES } = require('../utils/common');
+const { ACCESS_RULES, ERROR_RESPONSES } = require('../utils/common');
 
 const authMiddleware = (req, res, next) => {
   try {
@@ -35,25 +35,42 @@ const authMiddleware = (req, res, next) => {
   }
 };
 
+const runAuthMiddleware = (req, res) => {
+  return new Promise((resolve, reject) => {
+    authMiddleware(req, res, (error) => {
+      if (error) return reject(error);
+      resolve();
+    });
+  });
+};
+
+const authorizeByRoles = async (req, allowedRoles, forbiddenMessage) => {
+  const db = req.app.get('db');
+  const placeholders = allowedRoles.map(() => '?').join(', ');
+  const [users] = await db.execute(
+    `SELECT role FROM users WHERE id = ? AND role IN (${placeholders})`,
+    [req.user.userId, ...allowedRoles]
+  );
+
+  if (users.length === 0) {
+    return ERROR_RESPONSES.forbidden(forbiddenMessage);
+  }
+
+  return null;
+};
+
 const adminMiddleware = async (req, res, next) => {
   try {
-    // First run auth middleware
-    await new Promise((resolve, reject) => {
-      authMiddleware(req, res, (error) => {
-        if (error) return reject(error);
-        resolve();
-      });
-    });
+    await runAuthMiddleware(req, res);
 
-    // Check if user is admin or president only (accountant cannot use adminMiddleware)
-    const db = req.app.get('db');
-    const [users] = await db.execute(
-      'SELECT role FROM users WHERE id = ? AND role IN (?, ?)',
-      [req.user.userId, 'admin', 'president']
+    const errorResponse = await authorizeByRoles(
+      req,
+      ACCESS_RULES.EXECUTIVE_ACTIONS,
+      'Admin privileges required'
     );
 
-    if (users.length === 0) {
-      return res.status(403).json(ERROR_RESPONSES.forbidden('Admin privileges required'));
+    if (errorResponse) {
+      return res.status(403).json(errorResponse);
     }
 
     next();
@@ -65,23 +82,16 @@ const adminMiddleware = async (req, res, next) => {
 
 const meetingMiddleware = async (req, res, next) => {
   try {
-    // First run auth middleware
-    await new Promise((resolve, reject) => {
-      authMiddleware(req, res, (error) => {
-        if (error) return reject(error);
-        resolve();
-      });
-    });
+    await runAuthMiddleware(req, res);
 
-    // Check if user is admin or president only (for meeting scheduling)
-    const db = req.app.get('db');
-    const [users] = await db.execute(
-      'SELECT role FROM users WHERE id = ? AND role IN (?, ?)',
-      [req.user.userId, 'admin', 'president']
+    const errorResponse = await authorizeByRoles(
+      req,
+      ACCESS_RULES.MEETING_MANAGEMENT,
+      'Only admins and presidents can schedule meetings'
     );
 
-    if (users.length === 0) {
-      return res.status(403).json(ERROR_RESPONSES.forbidden('Only admins and presidents can schedule meetings'));
+    if (errorResponse) {
+      return res.status(403).json(errorResponse);
     }
 
     next();
@@ -93,23 +103,16 @@ const meetingMiddleware = async (req, res, next) => {
 
 const recordingMiddleware = async (req, res, next) => {
   try {
-    // First run auth middleware
-    await new Promise((resolve, reject) => {
-      authMiddleware(req, res, (error) => {
-        if (error) return reject(error);
-        resolve();
-      });
-    });
+    await runAuthMiddleware(req, res);
 
-    // Check if user is ONLY accountant (for recording contributions/loans/penalties)
-    const db = req.app.get('db');
-    const [users] = await db.execute(
-      'SELECT role FROM users WHERE id = ? AND role = ?',
-      [req.user.userId, 'accountant']
+    const errorResponse = await authorizeByRoles(
+      req,
+      ACCESS_RULES.TRANSACTION_RECORDING,
+      'Only accountants can record payments/contributions'
     );
 
-    if (users.length === 0) {
-      return res.status(403).json(ERROR_RESPONSES.forbidden('Only accountants can record payments/contributions'));
+    if (errorResponse) {
+      return res.status(403).json(errorResponse);
     }
 
     next();

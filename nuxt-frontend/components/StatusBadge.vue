@@ -8,6 +8,8 @@
 </template>
 
 <script setup>
+import { isExecutiveRole } from '~/utils/authGuard'
+
 const props = defineProps({
   status: { type: String, required: true },
   type: { type: String, default: 'default' }
@@ -17,7 +19,7 @@ const badgeClasses = computed(() => {
   const { status, type } = props
   
   if (type === 'role') {
-    return status === 'admin' 
+    return isExecutiveRole(status)
       ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
       : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300'
   }

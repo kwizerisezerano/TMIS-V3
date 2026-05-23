@@ -7,7 +7,7 @@
 
       <UForm :state="form" @submit="processRefund">
         <UFormGroup label="Refund Amount" name="amount">
-          <UInput v-model="form.amount" type="number" placeholder="Enter amount" />
+          <CurrencyInput v-model="form.amount" placeholder="Enter amount" />
         </UFormGroup>
 
         <UFormGroup label="Reason" name="reason">

@@ -7,6 +7,8 @@ const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const MONEY_DECIMAL = 'DECIMAL(65,2)';
+
 // Test configuration
 const TEST_DB_CONFIG = {
   host: 'localhost',
@@ -94,7 +96,7 @@ async function setupDatabase() {
         description TEXT,
         president_id INT NOT NULL,
         max_members INT NOT NULL DEFAULT 10,
-        contribution_amount DECIMAL(10,2) NOT NULL,
+        contribution_amount ${MONEY_DECIMAL} NOT NULL,
         frequency ENUM('daily', 'weekly', 'monthly') DEFAULT 'monthly',
         status ENUM('active', 'inactive', 'completed') DEFAULT 'active',
         start_date DATE NOT NULL,
@@ -134,7 +136,7 @@ async function setupDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         member_id INT NOT NULL,
         tontine_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         contribution_date DATE NOT NULL,
         status ENUM('paid', 'pending', 'overdue') DEFAULT 'paid',
         payment_method VARCHAR(50),
@@ -148,7 +150,7 @@ async function setupDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         member_id INT NOT NULL,
         tontine_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         interest_rate DECIMAL(5,2) DEFAULT 0.00,
         duration_months INT NOT NULL,
         purpose TEXT,
@@ -166,7 +168,7 @@ async function setupDatabase() {
       `CREATE TABLE payments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         loan_id INT NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         payment_date DATE NOT NULL,
         payment_method VARCHAR(50),
         status ENUM('paid', 'pending', 'failed') DEFAULT 'paid',
@@ -194,7 +196,7 @@ async function setupDatabase() {
         member_id INT NOT NULL,
         tontine_id INT NOT NULL,
         type ENUM('late_contribution', 'missed_meeting', 'other') NOT NULL,
-        amount DECIMAL(10,2) NOT NULL,
+        amount ${MONEY_DECIMAL} NOT NULL,
         description TEXT,
         status ENUM('pending', 'paid', 'waived') DEFAULT 'pending',
         imposed_date DATE NOT NULL,

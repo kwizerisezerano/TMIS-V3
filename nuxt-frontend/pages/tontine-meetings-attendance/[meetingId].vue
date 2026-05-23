@@ -82,6 +82,7 @@ import { ref, onMounted } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
+const { user, initAuth } = useAuth()
 const meetingId = route.params.meetingId
 
 const meeting = ref(null)
@@ -151,8 +152,10 @@ const saveAttendance = async () => {
   saving.value = true
   const { api } = useApi()
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
-    
+    if (!user.value) {
+      return
+    }
+
     const attendancePayload = attendance.value.map(a => ({
       userId: a.userId,
       status: a.status,
@@ -164,7 +167,7 @@ const saveAttendance = async () => {
       method: 'PUT',
       body: {
         attendance: attendancePayload,
-        markedBy: user.id
+        markedBy: user.value.id
       }
     })
     
@@ -187,6 +190,7 @@ const formatDate = (dateString) => {
 }
 
 onMounted(() => {
+  initAuth()
   fetchMeetingAndMembers()
 })
 </script>

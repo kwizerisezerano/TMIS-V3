@@ -7,6 +7,8 @@ const mysql = require('mysql2/promise');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const MONEY_DECIMAL = 'DECIMAL(65,2)';
+
 // Test database configuration
 const testDbConfig = {
   host: process.env.TEST_DB_HOST || 'localhost',
@@ -106,7 +108,7 @@ class TestDatabaseSetup {
         description TEXT,
         president_id INT NOT NULL,
         max_members INT NOT NULL DEFAULT 10,
-        contribution_amount DECIMAL(10,2) NOT NULL,
+        contribution_amount ${MONEY_DECIMAL} NOT NULL,
         frequency ENUM('daily', 'weekly', 'monthly') DEFAULT 'monthly',
         status ENUM('active', 'inactive', 'completed') DEFAULT 'active',
         start_date DATE NOT NULL,

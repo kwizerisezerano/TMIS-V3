@@ -11,7 +11,7 @@
             All Tontines
           </NuxtLink>
           <ActionButton 
-            v-if="isAdmin" 
+            v-if="canCreateBranch" 
             @click="openModal('create')" 
             icon="i-heroicons-building-library"
           >
@@ -150,6 +150,8 @@
 </template>
 
 <script setup>
+import { isAccountant, isAdminLevel, isAdminOnly } from '~/utils/authGuard'
+
 const searchQuery = ref('')
 const statusFilter = ref('')
 const currentPage = ref(1)
@@ -161,6 +163,8 @@ const modalLoading = ref(false)
 const modalError = ref('')
 const modalSuccess = ref('')
 let modalCloseTimer = null
+
+const { user, initAuth } = useAuth()
 
 const tableColumns = [
   { key: 'name', label: 'Name' },
@@ -180,7 +184,6 @@ const statusFilters = [
 ]
 const loading = ref(true)
 const tontines = ref([])
-const user = ref(null)
 const userTontines = ref([])
 const showJoinConfirm = ref(false)
 const selectedTontine = ref(null)
@@ -188,26 +191,22 @@ const joinLoading = ref(false)
 
 
 const isAdmin = computed(() => {
-  return user.value?.role === 'admin' || user.value?.role === 'president' || user.value?.role === 'accountant'
+  return isAdminLevel(user.value)
+})
+
+const canCreateBranch = computed(() => {
+  return isAdminOnly(user.value)
 })
 
 const isAdminOrPresident = computed(() => {
-  return user.value?.role === 'admin' || user.value?.role === 'president'
+  return isAdminOnly(user.value)
 })
 
 onMounted(async () => {
   if (process.client) {
-    const { initAuth } = useAuth()
-    
-    // Ensure auth is initialized from localStorage (loads access token)
     initAuth()
-    
-    // Small delay to ensure token is loaded
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+
+    if (user.value) {
       await fetchTontines()
       await fetchUserTontines()
     }
@@ -468,7 +467,7 @@ const getTontineActions = (item) => {
   }
   
   // Only accountants can see recording options
-  if (user.value?.role === 'accountant') {
+  if (isAccountant(user.value)) {
     manageActions.push({
       label: 'Record Contributions',
       icon: 'i-heroicons-pencil-square',

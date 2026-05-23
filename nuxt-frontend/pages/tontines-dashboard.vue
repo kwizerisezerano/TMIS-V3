@@ -82,7 +82,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-emerald-50 text-sm font-medium">Total Savings</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.totalContributions.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalContributions) }}</p>
                 <p class="text-xs text-emerald-100 mt-1">All time</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
@@ -95,7 +95,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-teal-50 text-sm font-medium">Outstanding Loans</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.totalLoans.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalLoans) }}</p>
                 <p class="text-xs text-teal-100 mt-1">{{ stats.activeLoans }} active loans</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
@@ -108,7 +108,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-red-50 text-sm font-medium">Pending Penalties</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.penalties.pending.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.penalties.pending) }}</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-white" />
@@ -120,7 +120,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-amber-50 text-sm font-medium">Paid Penalties</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.penalties.paid.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.penalties.paid) }}</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-check-badge" class="w-6 h-6 text-white" />
@@ -228,6 +228,7 @@ if (process.client) {
   Chart.register(...registerables)
 }
 
+const { formatDashboardAmount } = useCurrency()
 const loading = ref(true)
 const allTontinesList = ref([])
 const stats = ref({

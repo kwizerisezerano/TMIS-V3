@@ -9,7 +9,6 @@ const {
   validatePhone, 
   validatePassword, 
   validateNames,
-  fetchAdminUsers,
   ERROR_RESPONSES,
   SUCCESS_RESPONSES,
   USER_ROLES,
@@ -19,6 +18,7 @@ const { encryptUserData, decryptUserData } = require('../utils/encryption');
 const { findUserByEmail } = require('../utils/emailLookup');
 const { getWelcomeTemplate } = require('../utils/emailTemplates');
 const { sendEmail } = require('../utils/email');
+const { notifyMemberAddedToTontine } = require('../utils/memberNotificationHelpers');
 
 class UsersController {
   constructor(db) {
@@ -433,6 +433,8 @@ class UsersController {
 
       const userId = result.insertId;
 
+      let memberOnboarding = null;
+
       // Add user to tontine if tontineId is provided
       if (tontineId) {
         try {
@@ -440,6 +442,11 @@ class UsersController {
             INSERT INTO tontine_members (tontine_id, user_id, shares, status, joined_at) 
             VALUES (?, ?, ?, ?, ?)
           `, [tontineId, userId, 1, 'approved', getCurrentUTCDate()]);
+
+          memberOnboarding = await notifyMemberAddedToTontine(this.db, {
+            userId,
+            tontineId
+          });
         } catch (tontineError) {
           console.error('Failed to add user to tontine:', tontineError);
         }
@@ -454,7 +461,10 @@ class UsersController {
       }
 
       return res.status(201).json(SUCCESS_RESPONSES.created(
-        { userId: result.insertId },
+        {
+          userId: result.insertId,
+          entryFee: memberOnboarding?.entryFee || null
+        },
         'User created successfully'
       ));
 

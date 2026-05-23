@@ -98,19 +98,11 @@
 
                 <!-- Amount -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="relative w-44 rounded-xl shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <span class="text-gray-500 dark:text-gray-400 text-sm font-semibold">RWF</span>
-                    </div>
-                    <input 
-                      v-model.number="record.amount" 
-                      type="number" 
-                      min="0"
-                      :max="calculateRemainingBalance(record)"
-                      class="block w-full rounded-xl border border-gray-300 dark:border-gray-600 pl-12 pr-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100"
-                      placeholder="0"
-                    />
-                  </div>
+                  <CurrencyInput 
+                    v-model="record.amount" 
+                    :max="calculateRemainingBalance(record)"
+                    placeholder="0"
+                  />
                 </td>
 
                 <!-- Notes -->
@@ -149,9 +141,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'accountant',
+  layout: 'default'
+})
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { initAuth } = useAuth()
 const tontineId = route.params.tontineId
 
 const tontine = ref(null)
@@ -320,6 +318,9 @@ const saveLoanPayments = async () => {
 }
 
 onMounted(() => {
+  if (process.client) {
+    initAuth()
+  }
   fetchData()
 })
 </script>

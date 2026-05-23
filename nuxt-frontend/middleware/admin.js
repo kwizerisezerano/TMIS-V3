@@ -1,12 +1,14 @@
+import { getStoredAuthState, isAdminOnly } from '~/utils/authGuard'
+
 export default defineNuxtRouteMiddleware((to, from) => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (!userData) {
+    const { isAuthenticated, user } = getStoredAuthState()
+
+    if (!isAuthenticated || !user) {
       return navigateTo('/login')
     }
-    
-    const user = JSON.parse(userData)
-    if (user.role !== 'admin' && user.role !== 'president' && user.role !== 'accountant') {
+
+    if (!isAdminOnly(user)) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Access denied. Admin privileges required.'

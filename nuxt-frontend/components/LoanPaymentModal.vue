@@ -7,7 +7,7 @@
 
       <UForm :state="form" @submit="payLoan">
         <UFormGroup label="Payment Amount" name="amount">
-          <UInput v-model="form.amount" type="number" placeholder="Enter payment amount" />
+          <CurrencyInput v-model="form.amount" placeholder="Enter payment amount" />
         </UFormGroup>
 
         <UFormGroup label="Phone Number" name="phone">

@@ -30,7 +30,7 @@ const io = socketIo(server, {
 app.use(cors({
   origin: process.env.FRONTEND_URLS ? process.env.FRONTEND_URLS.split(',') : ['http://localhost:3000', 'http://localhost:3200'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-User-Agent'],
   credentials: true
 }));
 
@@ -72,9 +72,11 @@ const dbConfig = {
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'ikimina_db',
   waitForConnections: true,
-  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 20, // Increased for performance
+  connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT) || 20,
   queueLimit: 0,
-  // Performance optimizations
+  // Performance and Precision optimizations
+  supportBigNumbers: true,
+  bigNumberStrings: true,
   idleTimeout: 300000, // 5 minutes
   maxIdle: 10,
   ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false

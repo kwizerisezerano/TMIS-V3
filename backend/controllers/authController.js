@@ -34,6 +34,34 @@ class AuthController {
     this.db = db;
   }
 
+  generateAuthTokens(userId, email, role) {
+    const accessToken = jwt.sign(
+      { userId, email, role },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '15m' }
+    );
+
+    const refreshToken = jwt.sign(
+      { userId, type: 'refresh' },
+      process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
+      { expiresIn: '7d' }
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  async buildAuthPayload(userRecord) {
+    const decryptedUser = decryptUserData(userRecord);
+
+    return {
+      id: userRecord.id,
+      names: decryptedUser.names,
+      email: decryptedUser.email,
+      phone: decryptedUser.phone,
+      role: userRecord.role
+    };
+  }
+
   // User registration
   async register(req, res) {
     try {
@@ -223,17 +251,10 @@ class AuthController {
         return res.status(500).json(ERROR_RESPONSES.server('Failed to process user data'));
       }
 
-      // Generate tokens
-      const accessToken = jwt.sign(
-        { userId: user.id, email: decryptedUser.email, role: user.role },
-        process.env.JWT_SECRET || 'fallback-secret',
-        { expiresIn: '15m' }
-      );
-
-      const refreshToken = jwt.sign(
-        { userId: user.id, type: 'refresh' },
-        process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
-        { expiresIn: '7d' }
+      const { accessToken, refreshToken } = this.generateAuthTokens(
+        user.id,
+        decryptedUser.email,
+        user.role
       );
 
       return res.status(200).json(SUCCESS_RESPONSES.ok({
@@ -251,6 +272,52 @@ class AuthController {
     } catch (error) {
       console.error('Login error:', error);
       return res.status(500).json(ERROR_RESPONSES.server('Login failed. Please try again.'));
+    }
+  }
+
+  // Refresh access token
+  async refreshToken(req, res) {
+    try {
+      const providedRefreshToken = req.body?.refreshToken;
+
+      if (!providedRefreshToken) {
+        return res.status(400).json(ERROR_RESPONSES.validation('Refresh token is required'));
+      }
+
+      let decodedToken;
+      try {
+        decodedToken = jwt.verify(
+          providedRefreshToken,
+          process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret'
+        );
+      } catch (tokenError) {
+        return res.status(401).json(ERROR_RESPONSES.unauthorized('Invalid or expired refresh token'));
+      }
+
+      if (decodedToken.type !== 'refresh' || !decodedToken.userId) {
+        return res.status(401).json(ERROR_RESPONSES.unauthorized('Invalid refresh token'));
+      }
+
+      const [users] = await this.db.execute('SELECT * FROM users WHERE id = ?', [decodedToken.userId]);
+      if (users.length === 0) {
+        return res.status(404).json(ERROR_RESPONSES.notFound('User not found'));
+      }
+
+      const authUser = await this.buildAuthPayload(users[0]);
+      const { accessToken, refreshToken } = this.generateAuthTokens(
+        authUser.id,
+        authUser.email,
+        authUser.role
+      );
+
+      return res.json(SUCCESS_RESPONSES.ok({
+        accessToken,
+        refreshToken,
+        user: authUser
+      }, 'Token refreshed successfully'));
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      return res.status(500).json(ERROR_RESPONSES.server('Failed to refresh token'));
     }
   }
 

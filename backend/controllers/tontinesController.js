@@ -264,8 +264,8 @@ class TontinesController {
       
       // Support both camelCase and snake_case field names
       const finalDescription = description || null;
-      const finalContributionAmount = Number(contributionAmount || contribution_amount) || null;
-      const finalMaxMembers = Number(maxMembers || max_members) || null;
+      const finalContributionAmount = (contributionAmount || contribution_amount) !== undefined ? (contributionAmount || contribution_amount).toString() : null;
+      const finalMaxMembers = (maxMembers || max_members) !== undefined ? Number(maxMembers || max_members) : null;
       const finalStartDate = startDate || start_date || null;
       const finalEndDate = endDate || end_date || null;
 
@@ -285,7 +285,7 @@ class TontinesController {
       }
 
       // Validate contribution amount
-      if (!finalContributionAmount || isNaN(finalContributionAmount) || finalContributionAmount <= 0) {
+      if (!finalContributionAmount || isNaN(parseFloat(finalContributionAmount)) || parseFloat(finalContributionAmount) <= 0) {
         return res.status(400).json(ERROR_RESPONSES.validation('Valid contribution amount is required'));
       }
 
@@ -357,9 +357,9 @@ class TontinesController {
       
       // Support both camelCase and snake_case field names
       const finalDescription = description || null;
-      const finalContributionAmount = Number(contributionAmount || contribution_amount) || null;
+      const finalContributionAmount = (contributionAmount || contribution_amount) !== undefined ? (contributionAmount || contribution_amount).toString() : null;
       const finalContributionFrequency = contributionFrequency || contribution_frequency || null;
-      const finalMaxMembers = Number(maxMembers || max_members) || null;
+      const finalMaxMembers = (maxMembers || max_members) !== undefined ? Number(maxMembers || max_members) : null;
       const finalStartDate = startDate || start_date || null;
       const finalEndDate = endDate || end_date || null;
 

@@ -316,9 +316,11 @@ class ContributionsController {
       }
 
       // Validate amount
-      if (isNaN(amount) || amount <= 0) {
+      if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
         return res.status(400).json(ERROR_RESPONSES.validation('Valid contribution amount is required'));
       }
+      
+      const finalAmount = amount.toString();
 
       // Check if user is member of tontine
       const [membership] = await this.db.execute(
@@ -372,7 +374,7 @@ class ContributionsController {
       const [result] = await this.db.execute(`
         INSERT INTO contributions (user_id, tontine_id, amount, payment_method, transaction_ref, payment_status, contribution_date, created_at) 
         VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?)
-      `, [finalUserId, finalTontineId, amount, finalPaymentMethod, transactionRef, 'Pending', getCurrentUTCDate()]);
+      `, [finalUserId, finalTontineId, finalAmount, finalPaymentMethod, transactionRef, 'Pending', getCurrentUTCDate()]);
 
       // Create notification for user
       await this.db.execute(`
@@ -381,7 +383,7 @@ class ContributionsController {
       `, [
         finalUserId,
         'Contribution Received',
-        `Your contribution of RWF ${amount} to ${tontine[0].name} has been received and is pending approval.`,
+        `Your contribution of RWF ${finalAmount} to ${tontine[0].name} has been received and is pending approval.`,
         'contribution',
         getCurrentUTCDate()
       ]);
@@ -682,8 +684,11 @@ class ContributionsController {
       const totalExpected = expectedMonths.length;
       const totalContributed = contributedMonths.size;
       const totalMissing = missingMonths.length;
-      const totalAmountExpected = totalExpected * contributionAmount;
-      const totalAmountContributed = approvedContributions.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0);
+      const totalAmountExpected = totalExpected * contributionAmount;// Calculate statistics
+      const totalAmountContributed = approvedContributions.reduce((sum, c) => {
+        const val = c.amount !== undefined ? c.amount.toString() : '0';
+        return sum + parseFloat(val);
+      }, 0);
       const totalAmountMissing = totalAmountExpected - totalAmountContributed;
 
       return res.json(SUCCESS_RESPONSES.ok({
@@ -766,10 +771,13 @@ class ContributionsController {
         }
 
         // Validate amount
-        const finalAmount = parseFloat(amount);
-        if (isNaN(finalAmount) || finalAmount < 0) {
+        const finalAmount = amount !== undefined ? amount.toString() : '0.00';
+        if (isNaN(parseFloat(finalAmount)) || parseFloat(finalAmount) < 0) {
+          console.log(`[Contributions] Skipping invalid amount: ${amount} (userId: ${userId})`);
           continue; // Skip invalid amounts
         }
+
+        console.log(`[Contributions] Recording amount: ${finalAmount} (Type: ${typeof amount}) for userId: ${userId}`);
 
         // Check if contribution record already exists for this user, tontine, and date
         const [existing] = await this.db.execute(

@@ -62,7 +62,7 @@
                 <Icon name="i-heroicons-banknotes" class="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
               </div>
             </div>
-            <div class="text-2xl font-bold text-emerald-800 dark:text-emerald-200">RWF {{ stats.totalContributions.toLocaleString() }}</div>
+            <div class="text-2xl font-bold text-emerald-800 dark:text-emerald-200">{{ formatDashboardAmount(stats.totalContributions) }}</div>
             <div class="flex items-center mt-2 text-xs text-emerald-600 dark:text-emerald-400">
               <span>{{ stats.contributionCount }} transactions</span>
               <span v-if="contributionTrend" :class="contributionTrend >= 0 ? 'text-green-600' : 'text-red-600'" class="ml-2">
@@ -80,7 +80,7 @@
                 <Icon name="i-heroicons-currency-dollar" class="w-5 h-5 text-amber-700 dark:text-amber-300" />
               </div>
             </div>
-            <div class="text-2xl font-bold text-amber-800 dark:text-amber-200">RWF {{ stats.totalLoanRequested.toLocaleString() }}</div>
+            <div class="text-2xl font-bold text-amber-800 dark:text-amber-200">{{ formatDashboardAmount(stats.totalLoanRequested) }}</div>
             <div class="flex items-center mt-2 text-xs text-amber-600 dark:text-amber-400">
               <span>{{ stats.activeLoans }} active</span>
               <span v-if="loanTrend" :class="loanTrend >= 0 ? 'text-green-600' : 'text-red-600'" class="ml-2">
@@ -98,7 +98,7 @@
                 <Icon name="i-heroicons-arrow-trending-up" class="w-5 h-5 text-blue-700 dark:text-blue-300" />
               </div>
             </div>
-            <div class="text-2xl font-bold text-blue-800 dark:text-blue-200">RWF {{ stats.totalLoanPaid.toLocaleString() }}</div>
+            <div class="text-2xl font-bold text-blue-800 dark:text-blue-200">{{ formatDashboardAmount(stats.totalLoanPaid) }}</div>
             <div class="flex items-center mt-2 text-xs text-blue-600 dark:text-blue-400">
               <span>{{ stats.paymentRate }}% repayment rate</span>
             </div>
@@ -279,7 +279,7 @@
             <div class="space-y-3">
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Penalty Revenue</span>
-                <span class="font-semibold text-red-600">RWF {{ penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0).toLocaleString() }}</span>
+                <span class="font-semibold text-red-600">{{ formatDashboardAmount(penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)) }}</span>
               </div>
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Penalties Collected</span>
@@ -294,6 +294,11 @@
 </template>
 
 <script setup>
+import { isAdminOnly } from '~/utils/authGuard'
+
+const { user, initAuth } = useAuth()
+const { formatDashboardAmount } = useCurrency()
+
 const stats = ref({
   totalContributions: 0,
   totalLoanRequested: 0,
@@ -307,20 +312,18 @@ const stats = ref({
 const contributions = ref([])
 const loans = ref([])
 const penalties = ref([])
-const user = ref(null)
 const tontines = ref([])
 const userTontines = ref([])
 const selectedTontine = ref('')
 const dateRange = ref('30')
-const isAdmin = computed(() => user.value?.role === 'admin' || user.value?.role === 'president')
+const isAdmin = computed(() => isAdminOnly(user.value))
 const contributionTrend = ref(null)
 const loanTrend = ref(null)
 
 onMounted(async () => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+    initAuth()
+    if (user.value) {
       if (isAdmin.value) {
         await fetchTontines()
         const route = useRoute()
@@ -329,8 +332,6 @@ onMounted(async () => {
         }
       }
       await fetchReportsData()
-    } else {
-      await navigateTo('/login')
     }
   }
 })

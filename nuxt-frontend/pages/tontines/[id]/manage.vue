@@ -89,7 +89,7 @@
                 {{ member.phone }}
               </td>
               <td class="px-4 py-4 whitespace-nowrap">
-                <span :class="member.role === 'admin' || member.role === 'president' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                <span :class="isExecutiveRole(member.role) ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
                   {{ member.role }}
                 </span>
               </td>
@@ -152,7 +152,7 @@
                 <td class="px-4 py-3 text-sm">{{ member.shares || 1 }}</td>
                 <td class="px-4 py-3 text-sm">RWF {{ (member.shares * tontineContributionAmount).toLocaleString() }}</td>
                 <td class="px-4 py-3">
-                  <UInput v-model="memberContributions[member.id].amount" type="number" min="0" size="sm" />
+                  <CurrencyInput v-model="memberContributions[member.id].amount" size="sm" />
                 </td>
                 <td class="px-4 py-3">
                   <USelect v-model="memberContributions[member.id].status" :options="contributionStatusOptions" size="sm" />
@@ -202,7 +202,7 @@
                 <td class="px-4 py-3 text-sm">RWF {{ (member.totalContributions || 0).toLocaleString() }}</td>
                 <td class="px-4 py-3 text-sm">RWF {{ Math.floor((member.totalContributions || 0) * 2 / 3).toLocaleString() }}</td>
                 <td class="px-4 py-3">
-                  <UInput v-model="memberLoans[member.id].amount" type="number" min="0" size="sm" />
+                  <CurrencyInput v-model="memberLoans[member.id].amount" size="sm" />
                 </td>
                 <td class="px-4 py-3">
                   <USelect v-model="memberLoans[member.id].repaymentPeriod" :options="repaymentPeriodOptions" size="sm" />
@@ -332,7 +332,7 @@
           </UFormGroup>
 
           <UFormGroup label="Amount (RWF)" name="amount" required>
-            <UInput v-model="newPenalty.amount" type="number" min="1" placeholder="Enter amount" />
+            <CurrencyInput v-model="newPenalty.amount" placeholder="Enter amount" />
           </UFormGroup>
 
           <UFormGroup label="Reason" name="reason" required>
@@ -351,15 +351,15 @@
 
 <script setup>
 definePageMeta({
-  middleware: 'admin',
+  middleware: 'privileged',
   layout: 'default'
 })
 
+import { USER_ROLES, isAccountant as isAccountantRole, isExecutiveRole } from '~/utils/authGuard'
+
 const route = useRoute()
 const toast = useToast()
-const { initAuth, accessToken } = useAuth()
-
-const user = ref(null)
+const { user, initAuth, accessToken } = useAuth()
 
 const tontineId = route.params.id
 const tontineName = ref('')
@@ -387,7 +387,7 @@ const newMember = ref({
   email: '',
   phone: '',
   password: '',
-  role: 'member'
+  role: USER_ROLES.MEMBER
 })
 
 const newPenalty = ref({
@@ -397,8 +397,8 @@ const newPenalty = ref({
 })
 
 const roleOptions = [
-  { label: 'Member', value: 'member' },
-  { label: 'Admin', value: 'admin' }
+  { label: 'Member', value: USER_ROLES.MEMBER },
+  { label: 'Admin', value: USER_ROLES.ADMIN }
 ]
 
 const contributionStatusOptions = [
@@ -424,9 +424,7 @@ const repaymentPeriodOptions = [
   { label: '6 months', value: 6 }
 ]
 
-const isAccountant = computed(() => {
-  return user.value?.role === 'accountant'
-})
+const isAccountant = computed(() => isAccountantRole(user.value))
 
 watch(isAccountant, (newVal) => {
   if (!newVal && (activeTab.value === 'contributions' || activeTab.value === 'loans')) {
@@ -443,12 +441,6 @@ const memberSelectOptions = computed(() => {
 
 onMounted(async () => {
   initAuth()
-  if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
-    }
-  }
   await Promise.all([
     fetchTontineDetails(),
     fetchMembers(),
@@ -601,7 +593,7 @@ const addMember = async () => {
       })
       
       showAddModal.value = false
-      newMember.value = { names: '', email: '', phone: '', password: '', role: 'member' }
+      newMember.value = { names: '', email: '', phone: '', password: '', role: USER_ROLES.MEMBER }
       await fetchMembers()
     }
   } catch (error) {
@@ -651,12 +643,16 @@ const saveContributions = async () => {
   try {
     savingContributions.value = true
     
-    const contributions = members.value.map(member => ({
-      userId: member.id,
-      amount: memberContributions.value[member.id].amount,
-      status: memberContributions.value[member.id].status,
-      notes: memberContributions.value[member.id].notes
-    }))
+    const contributions = members.value.map(member => {
+      const amount = memberContributions.value[member.id].amount;
+      console.log(`[Manage] Preparing contribution for user ${member.id}:`, amount, typeof amount);
+      return {
+        userId: member.id,
+        amount: amount.toString(), // Send as string to preserve precision
+        status: memberContributions.value[member.id].status,
+        notes: memberContributions.value[member.id].notes
+      };
+    })
     
     await api(`/v1/contributions/tontine/${tontineId}/bulk`, {
       method: 'POST',

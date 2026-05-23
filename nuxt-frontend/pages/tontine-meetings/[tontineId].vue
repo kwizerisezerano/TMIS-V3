@@ -117,6 +117,7 @@
 import { ref, onMounted } from 'vue'
 
 const route = useRoute()
+const { user, initAuth } = useAuth()
 const tontineId = route.params.tontineId
 
 const meetings = ref([])
@@ -182,8 +183,10 @@ const createMeeting = async () => {
   creating.value = true
   const { api } = useApi()
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
-    
+    if (!user.value) {
+      return
+    }
+
     await api('/v1/meetings', {
       method: 'POST',
       body: {
@@ -193,7 +196,7 @@ const createMeeting = async () => {
         agenda: newMeeting.value.agenda,
         meetingDate: newMeeting.value.meetingDate,
         location: newMeeting.value.location,
-        createdBy: user.id
+        createdBy: user.value.id
       }
     })
     
@@ -235,6 +238,7 @@ const markAttendance = (meeting) => {
 }
 
 onMounted(() => {
+  initAuth()
   fetchTontine()
   fetchMeetings()
 })

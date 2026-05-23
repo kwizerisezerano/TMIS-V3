@@ -2,7 +2,20 @@ export const useAuth = () => {
   const user = useState('user', () => null)
   const accessToken = useState('accessToken', () => null)
   const refreshToken = useState('refreshToken', () => null)
+  const refreshPromise = useState('refreshPromise', () => null)
   const isAuthenticated = computed(() => !!accessToken.value)
+
+  const setAuthData = (authData) => {
+    accessToken.value = authData.accessToken
+    refreshToken.value = authData.refreshToken
+    user.value = authData.user
+
+    if (process.client) {
+      localStorage.setItem('accessToken', authData.accessToken)
+      localStorage.setItem('refreshToken', authData.refreshToken)
+      localStorage.setItem('user', JSON.stringify(authData.user))
+    }
+  }
 
   const login = async (email, password) => {
     const { api } = useApi()
@@ -13,19 +26,14 @@ export const useAuth = () => {
         body: { email, password }
       })
 
-      // Store tokens and user data
-      accessToken.value = response.accessToken
-      refreshToken.value = response.refreshToken
-      user.value = response.user
-
-      // Store in localStorage for persistence
-      if (process.client) {
-        localStorage.setItem('accessToken', response.accessToken)
-        localStorage.setItem('refreshToken', response.refreshToken)
-        localStorage.setItem('user', JSON.stringify(response.user))
+      const authData = response.data || response
+      if (!authData.accessToken || !authData.refreshToken || !authData.user) {
+        throw new Error('Invalid login response')
       }
 
-      return response
+      setAuthData(authData)
+
+      return authData
     } catch (error) {
       throw error
     }
@@ -35,6 +43,7 @@ export const useAuth = () => {
     user.value = null
     accessToken.value = null
     refreshToken.value = null
+    refreshPromise.value = null
 
     if (process.client) {
       localStorage.removeItem('accessToken')
@@ -93,15 +102,37 @@ export const useAuth = () => {
       return false
     }
 
+    if (refreshPromise.value) {
+      return refreshPromise.value
+    }
+
     try {
-      // TODO: Backend endpoint /api/v1/auth/refresh-token does not exist
-      // Token refresh feature requires backend implementation
-      console.warn('Token refresh endpoint not implemented in backend')
-      throw new Error('Token refresh not available')
+      const config = useRuntimeConfig()
+      refreshPromise.value = $fetch(`${config.public.apiBase}/v1/auth/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: {
+          refreshToken: refreshToken.value
+        }
+      }).then((response) => {
+        const authData = response.data || response
+        if (!authData.accessToken || !authData.refreshToken || !authData.user) {
+          throw new Error('Invalid refresh response')
+        }
+
+        setAuthData(authData)
+        return true
+      })
+
+      return await refreshPromise.value
     } catch (error) {
       console.error('Token refresh error:', error)
       logout()
       return false
+    } finally {
+      refreshPromise.value = null
     }
   }
 

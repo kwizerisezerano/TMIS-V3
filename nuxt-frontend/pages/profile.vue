@@ -131,19 +131,20 @@
 
 <script setup>
 const loading = ref(true)
-const user = ref(null)
 const profileData = ref({})
 const stats = ref({
   totalContributions: 0,
   activeTontines: 0,
   totalLoans: 0
 })
+const { user, initAuth } = useAuth()
+
+const unwrapResponse = (response) => response?.data || response
 
 onMounted(async () => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+    initAuth()
+    if (user.value) {
       await loadProfile() // Fetch fresh data from API
       await loadStats()
     }
@@ -155,11 +156,11 @@ const loadProfile = async () => {
   try {
     // TODO: Backend endpoint /api/v1/auth/users/:userId does not exist
     // Using /api/v1/users/:userId as alternative
-    profileData.value = await api(`/v1/users/${user.value.id}`)
+    profileData.value = unwrapResponse(await api(`/v1/users/${user.value.id}`))
   } catch (error) {
     console.error('Failed to load profile:', error)
     // Use localStorage data as fallback
-    profileData.value = user.value
+    profileData.value = user.value || {}
   }
 }
 
@@ -168,12 +169,12 @@ const loadStats = async () => {
   try {
     // Fetch contributions
     // TODO: Backend endpoint /api/v1/contributions/user/:userId does not exist
-    const contributions = await api('/v1/contributions', { params: { userId: user.value.id } })
+    const contributions = unwrapResponse(await api('/v1/contributions', { params: { userId: user.value.id } }))
     stats.value.totalContributions = contributions.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
     
     // Fetch tontines
     // TODO: Backend endpoint /api/v1/tontines/user/:userId does not exist
-    const tontines = await api('/v1/tontines', { params: { userId: user.value.id } })
+    const tontines = unwrapResponse(await api('/v1/tontines', { params: { userId: user.value.id } }))
     stats.value.activeTontines = tontines.length
     
     // Get first joined tontine date
@@ -186,7 +187,7 @@ const loadStats = async () => {
     
     // Fetch loans
     // TODO: Backend endpoint /api/v1/loans/user/:userId does not exist
-    const loans = await api('/v1/loans', { params: { userId: user.value.id } })
+    const loans = unwrapResponse(await api('/v1/loans', { params: { userId: user.value.id } }))
     stats.value.totalLoans = loans.reduce((sum, l) => sum + parseFloat(l.amount || 0), 0)
     
   } catch (error) {

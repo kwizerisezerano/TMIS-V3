@@ -129,9 +129,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'accountant',
+  layout: 'default'
+})
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { initAuth } = useAuth()
 const tontineId = route.params.tontineId
 
 const tontine = ref(null)
@@ -257,6 +263,9 @@ const savePenaltyPayments = async () => {
 }
 
 onMounted(() => {
+  if (process.client) {
+    initAuth()
+  }
   fetchData()
 })
 </script>

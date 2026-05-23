@@ -2,6 +2,10 @@
  * Common utilities and validations used across the application
  */
 
+const accessControl = require('../../shared/accessControl.json');
+
+const cloneValues = (values) => Object.freeze([...values]);
+
 // Common validation patterns
 const VALIDATION_PATTERNS = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -34,13 +38,22 @@ const VALIDATION_MESSAGES = {
   idNumber: 'ID number must be exactly 16 digits'
 };
 
-// Common roles
-const USER_ROLES = {
-  ADMIN: 'admin',
-  PRESIDENT: 'president',
-  MEMBER: 'member',
-  ACCOUNTANT: 'accountant'
-};
+// Shared role and access-control contract used by both backend and frontend.
+const USER_ROLES = Object.freeze({ ...accessControl.roles });
+
+const ROLE_GROUPS = Object.freeze({
+  EXECUTIVE: cloneValues(accessControl.roleGroups.EXECUTIVE),
+  ADMIN_ONLY: cloneValues(accessControl.roleGroups.EXECUTIVE),
+  PRIVILEGED: cloneValues(accessControl.roleGroups.PRIVILEGED),
+  ACCOUNTING: cloneValues(accessControl.roleGroups.ACCOUNTING),
+  RECORDING: cloneValues(accessControl.roleGroups.ACCOUNTING)
+});
+
+const ACCESS_RULES = Object.freeze({
+  ...Object.fromEntries(
+    Object.entries(accessControl.accessRules).map(([key, values]) => [key, cloneValues(values)])
+  )
+});
 
 // Common status values
 const STATUS = {
@@ -164,6 +177,8 @@ const isDateValid = (date) => {
   return d instanceof Date && !isNaN(d);
 };
 
+const toSqlValue = (value) => (value === undefined ? null : value);
+
 // Activity logging utility
 const logActivity = async (db, {
   userId,
@@ -171,30 +186,60 @@ const logActivity = async (db, {
   entityType,
   entityId = null,
   actionDescription,
+  status = 'success',
+  responseStatusCode = null,
   oldData = null,
   newData = null,
   ipAddress = null,
   userAgent = null
 }) => {
   try {
-    await db.execute(`
-      INSERT INTO activity_log (
-        user_id, action_type, entity_type, entity_id, 
-        action_description, old_data, new_data, 
-        ip_address, user_agent, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      userId,
-      actionType,
-      entityType,
-      entityId,
-      actionDescription,
-      oldData ? JSON.stringify(oldData) : null,
-      newData ? JSON.stringify(newData) : null,
-      ipAddress,
-      userAgent,
-      getCurrentUTCDate()
-    ]);
+    try {
+      await db.execute(`
+        INSERT INTO activity_log (
+          user_id, action_type, entity_type, entity_id,
+          action_description, status, response_status_code,
+          old_data, new_data, ip_address, user_agent, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        toSqlValue(userId),
+        toSqlValue(actionType),
+        toSqlValue(entityType),
+        toSqlValue(entityId),
+        toSqlValue(actionDescription),
+        toSqlValue(status),
+        toSqlValue(responseStatusCode),
+        oldData ? JSON.stringify(oldData) : null,
+        newData ? JSON.stringify(newData) : null,
+        toSqlValue(ipAddress),
+        toSqlValue(userAgent),
+        getCurrentUTCDate()
+      ]);
+    } catch (error) {
+      if (error.code !== 'ER_BAD_FIELD_ERROR') {
+        throw error;
+      }
+
+      // Keep the app working on older databases until the migration is applied.
+      await db.execute(`
+        INSERT INTO activity_log (
+          user_id, action_type, entity_type, entity_id,
+          action_description, old_data, new_data,
+          ip_address, user_agent, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        toSqlValue(userId),
+        toSqlValue(actionType),
+        toSqlValue(entityType),
+        toSqlValue(entityId),
+        toSqlValue(actionDescription),
+        oldData ? JSON.stringify(oldData) : null,
+        newData ? JSON.stringify(newData) : null,
+        toSqlValue(ipAddress),
+        toSqlValue(userAgent),
+        getCurrentUTCDate()
+      ]);
+    }
   } catch (error) {
     console.error('Error logging activity:', error);
   }
@@ -232,6 +277,8 @@ module.exports = {
   
   // User roles and status
   USER_ROLES,
+  ROLE_GROUPS,
+  ACCESS_RULES,
   STATUS,
   
   // Response helpers

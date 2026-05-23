@@ -124,7 +124,7 @@
                 {{ member.phone }}
               </td>
               <td class="px-4 py-4 whitespace-nowrap">
-                <span :class="member.role === 'admin' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                <span :class="isExecutiveRole(member.role) ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
                   {{ member.role }}
                 </span>
               </td>
@@ -572,6 +572,7 @@
               <tr>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
@@ -585,6 +586,11 @@
                 <td class="px-4 py-4 whitespace-nowrap">
                   <span :class="getActionTypeClass(log.action_type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
                     {{ log.action_type }}
+                  </span>
+                </td>
+                <td class="px-4 py-4 whitespace-nowrap">
+                  <span :class="getActivityStatusClass(log.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ (log.status || 'success').toUpperCase() }}
                   </span>
                 </td>
                 <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -743,6 +749,8 @@ definePageMeta({
   layout: 'default'
 })
 
+import { USER_ROLES, isAdminOnly, isExecutiveRole } from '~/utils/authGuard'
+
 const { user, initAuth } = useAuth()
 const { api } = useApi()
 const toast = useToast()
@@ -752,9 +760,7 @@ const tontineId = ref(route.query.tontine || '1')
 
 const activeTab = ref(route.query.tab || 'members')
 
-const isAdminOrPresident = computed(() => {
-  return user.value?.role === 'admin' || user.value?.role === 'president'
-})
+const isAdminOrPresident = computed(() => isAdminOnly(user.value))
 const members = ref([])
 const contributions = ref([])
 const loans = ref([])
@@ -785,7 +791,7 @@ const newMember = ref({
   email: '',
   phone: '',
   password: '',
-  role: 'member'
+  role: USER_ROLES.MEMBER
 })
 
 const editingMember = ref({
@@ -794,13 +800,13 @@ const editingMember = ref({
   names: '',
   email: '',
   phone: '',
-  role: 'member',
+  role: USER_ROLES.MEMBER,
   shares: 1
 })
 
 const roleOptions = [
-  { label: 'Member', value: 'member' },
-  { label: 'Admin', value: 'admin' }
+  { label: 'Member', value: USER_ROLES.MEMBER },
+  { label: 'Admin', value: USER_ROLES.ADMIN }
 ]
 
 const sharesOptions = [
@@ -907,6 +913,16 @@ const getActionTypeClass = (actionType) => {
   }
 }
 
+const getActivityStatusClass = (status) => {
+  switch (String(status || '').toLowerCase()) {
+    case 'failure':
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+    case 'success':
+    default:
+      return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+  }
+}
+
 const formatDateTime = (dateString) => {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -982,7 +998,7 @@ const openAddMemberModal = () => {
   addError.value = ''
   addSuccess.value = ''
   submitting.value = false
-  newMember.value = { names: '', email: '', phone: '', password: '', role: 'member' }
+  newMember.value = { names: '', email: '', phone: '', password: '', role: USER_ROLES.MEMBER }
   showAddModal.value = true
 }
 
@@ -1008,7 +1024,7 @@ const addMember = async () => {
       setTimeout(() => {
         showAddModal.value = false
         addSuccess.value = ''
-        newMember.value = { names: '', email: '', phone: '', password: '', role: 'member' }
+        newMember.value = { names: '', email: '', phone: '', password: '', role: USER_ROLES.MEMBER }
         fetchMembers()
       }, 2000)
     } else {
@@ -1025,7 +1041,7 @@ const addMember = async () => {
 const handleCloseAddModal = () => {
   addError.value = ''
   addSuccess.value = ''
-  newMember.value = { names: '', email: '', phone: '', password: '', role: 'member' }
+  newMember.value = { names: '', email: '', phone: '', password: '', role: USER_ROLES.MEMBER }
   showAddModal.value = false
 }
 

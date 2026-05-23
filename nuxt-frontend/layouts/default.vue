@@ -163,6 +163,8 @@
 </template>
 
 <script setup>
+import { isAdminLevel } from '~/utils/authGuard'
+
 const sidebarOpen = ref(false)
 const showUserDropdown = ref(false)
 const showNotifications = ref(false)
@@ -310,7 +312,7 @@ const toggleTheme = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
-const isAdmin = computed(() => user.value?.role === 'admin' || user.value?.role === 'president' || user.value?.role === 'accountant')
+const isAdmin = computed(() => isAdminLevel(user.value))
 
   const navigation = computed(() => {
   // Base navigation available to all roles

@@ -366,7 +366,7 @@ class LoansController {
       // Support both camelCase and snake_case field names
       const finalUserId = userId || user_id;
       const finalTontineId = tontineId || tontine_id;
-      const finalLoanAmount = loanAmount || loan_amount || amount;
+      const finalLoanAmount = (loanAmount || loan_amount || amount) !== undefined ? (loanAmount || loan_amount || amount).toString() : null;
       const finalPhoneNumber = phoneNumber || phone_number;
       const finalRepaymentPeriod = repaymentPeriod || repayment_period || 6;
 
@@ -391,7 +391,7 @@ class LoansController {
       }
 
       // Validate loan amount
-      if (isNaN(finalLoanAmount) || finalLoanAmount <= 0) {
+      if (isNaN(parseFloat(finalLoanAmount)) || parseFloat(finalLoanAmount) <= 0) {
         return ResponseHelpers.sendValidationResponse(res, 'Valid loan amount is required');
       }
 

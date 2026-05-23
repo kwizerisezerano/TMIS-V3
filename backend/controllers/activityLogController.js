@@ -20,6 +20,7 @@ class ActivityLogController {
         page = 1, 
         limit = 20, 
         actionType,
+        status,
         entityType,
         userId,
         startDate,
@@ -34,6 +35,11 @@ class ActivityLogController {
       if (actionType) {
         whereClause += ' AND action_type = ?';
         params.push(actionType);
+      }
+
+      if (status) {
+        whereClause += ' AND al.status = ?';
+        params.push(status);
       }
 
       if (entityType) {

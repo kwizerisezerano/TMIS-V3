@@ -335,9 +335,10 @@ class PaymentsController {
       const finalTontineId = tontineId || tontine_id;
       const finalPaymentMethod = paymentMethod || payment_method;
       const finalPaymentData = paymentData || payment_data;
+      const finalAmount = amount !== undefined && amount !== null ? amount.toString() : null;
 
       // Validate required fields
-      if (!finalUserId || !finalTontineId || !amount || !finalPaymentMethod) {
+      if (!finalUserId || !finalTontineId || !finalAmount || !finalPaymentMethod) {
         return res.status(400).json(ERROR_RESPONSES.validation('All required fields must be provided'));
       }
 
@@ -351,7 +352,7 @@ class PaymentsController {
       }
 
       // Validate amount
-      if (isNaN(amount) || amount <= 0) {
+      if (isNaN(parseFloat(finalAmount)) || parseFloat(finalAmount) <= 0) {
         return ResponseHelpers.sendValidationResponse(res, 'Valid payment amount is required');
       }
 
@@ -511,7 +512,7 @@ class PaymentsController {
       // Support both camelCase and snake_case field names
       const finalUserId = userId || user_id;
       const finalLoanId = loanId || loan_id;
-      const finalAmount = amount || paymentAmount;
+      const finalAmount = (amount || paymentAmount) !== undefined && (amount || paymentAmount) !== null ? (amount || paymentAmount).toString() : null;
       const finalPaymentMethod = paymentMethod || payment_method;
       const finalPaymentData = paymentData || payment_data;
 
@@ -530,7 +531,7 @@ class PaymentsController {
       }
 
       // Validate amount
-      if (isNaN(finalAmount) || finalAmount <= 0) {
+      if (isNaN(parseFloat(finalAmount)) || parseFloat(finalAmount) <= 0) {
         return ResponseHelpers.sendValidationResponse(res, 'Valid payment amount is required');
       }
 

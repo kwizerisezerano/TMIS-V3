@@ -168,9 +168,7 @@
           <div v-else class="space-y-3">
             <div v-for="loan in loans" :key="loan.id" 
                  class="flex justify-between items-center p-4 rounded-lg" :class="{
-                   'bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600': loan.status === 'Approved',
-                   'bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600': loan.status === 'Pending',
-                   'bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600': loan.status === 'Rejected',
+                   'bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600': ['Approved', 'Pending', 'Rejected'].includes(loan.status),
                    'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700': !['Approved', 'Pending', 'Rejected'].includes(loan.status)
                  }">
               <div>
@@ -196,7 +194,7 @@
         
         <div class="space-y-4">
           <UFormGroup label="Loan Amount (RWF)">
-            <UInput v-model="loanAmount" type="number" min="1" placeholder="Enter amount" />
+            <CurrencyInput v-model="loanAmount" placeholder="Enter amount" />
             <template #help>
               <p class="text-xs text-gray-500">Recommended max: RWF {{ maxLoanAmount.toLocaleString() }} (2/3 of contributions) for lower interest rate</p>
             </template>
@@ -212,14 +210,14 @@
             </div>
           </div>
           
-          <UFormGroup label="Repayment Period (months)" :error="repaymentPeriod && (repaymentPeriod < 1 || repaymentPeriod > 6) ? 'Maximum repayment period is 6 months' : undefined">
-            <UInput v-model="repaymentPeriod" type="number" min="1" max="6" placeholder="1-6">
+          <UFormGroup label="Repayment Period (months)" :error="repaymentPeriod && (repaymentPeriod < 1) ? 'Repayment period must be at least 1 month' : undefined">
+            <UInput v-model="repaymentPeriod" type="number" min="1" placeholder="Enter months">
               <template #trailing>
                 <span class="text-gray-500">months</span>
               </template>
             </UInput>
             <template #help>
-              <p class="text-xs text-gray-500">Enter 1-6 months (maximum allowed)</p>
+              <p class="text-xs text-gray-500">Enter the number of months for repayment</p>
             </template>
           </UFormGroup>
           
@@ -369,6 +367,8 @@
 </template>
 
 <script setup>
+const { user, initAuth } = useAuth()
+
 const showLoanModal = ref(false)
 const showPaymentModal = ref(false)
 const loanLoading = ref(false)
@@ -376,7 +376,6 @@ const paymentLoading = ref(false)
 const loading = ref(true)
 const loadingTontines = ref(true)
 const loans = ref([])
-const user = ref(null)
 const selectedTontine = ref(null)
 const userTontines = ref([])
 const contributionsByTontine = ref({})
@@ -460,9 +459,8 @@ const paymentOptions = [
 // Get user data and fetch loans
 onMounted(async () => {
   if (process.client) {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
+    initAuth()
+    if (user.value) {
       loanPaymentPhone.value = user.value.phone // Pre-fill with user's phone
       await fetchUserTontines()
       

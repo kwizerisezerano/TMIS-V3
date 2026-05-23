@@ -146,6 +146,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
+const { user, initAuth } = useAuth()
 const penalties = ref([])
 const userTontines = ref([])
 const selectedTontine = ref(null)
@@ -154,9 +155,13 @@ const loading = ref(false)
 const fetchUserTontines = async () => {
   const { api } = useApi()
   try {
-    const user = JSON.parse(localStorage.getItem('user'))
+    initAuth()
+    if (!user.value) {
+      userTontines.value = []
+      return
+    }
     // TODO: Backend endpoint /api/v1/tontines/user/:userId does not exist
-    const response = await api('/v1/tontines', { params: { userId: user.id } })
+    const response = await api('/v1/tontines', { params: { userId: user.value.id } })
     const data = response.data || response
     userTontines.value = Array.isArray(data) ? data : (data.data || [])
   } catch (error) {
@@ -176,8 +181,11 @@ const fetchPenalties = async (tontineId) => {
   try {
     // TODO: Backend endpoint /api/v1/penalties/user does not exist
     // Using /api/v1/penalties/user/:userId as alternative
-    const user = JSON.parse(localStorage.getItem('user'))
-    const response = await api(`/v1/penalties/user/${user.id}`)
+    if (!user.value) {
+      penalties.value = []
+      return
+    }
+    const response = await api(`/v1/penalties/user/${user.value.id}`)
     const data = response.data || response
     const allPenalties = Array.isArray(data) ? data : (data.data || [])
     penalties.value = allPenalties.filter(p => p.tontine_id === tontineId)

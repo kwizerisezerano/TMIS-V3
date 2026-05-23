@@ -5,6 +5,11 @@
 
 const { logActivity } = require('../utils/common');
 
+const getTrueUserAgent = (req) => {
+  const forwardedAgent = req.get('X-Client-User-Agent') || req.get('X-Original-User-Agent');
+  return forwardedAgent || req.get('User-Agent') || 'Unknown User Agent';
+};
+
 const activityLogMiddleware = async (req, res, next) => {
   // Only log non-GET requests
   if (req.method === 'GET') {
@@ -63,7 +68,8 @@ const activityLogMiddleware = async (req, res, next) => {
         entityType,
         entityId,
         actionDescription,
-        userId: req.user?.userId
+        userId: req.user?.userId,
+        statusCode: res.statusCode
       });
       
       // Log activity
@@ -73,10 +79,12 @@ const activityLogMiddleware = async (req, res, next) => {
         entityType,
         entityId,
         actionDescription,
+        status: res.statusCode >= 400 ? 'failure' : 'success',
+        responseStatusCode: res.statusCode,
         oldData: null,
         newData: req.body,
         ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
+        userAgent: getTrueUserAgent(req)
       });
       
     } catch (error) {

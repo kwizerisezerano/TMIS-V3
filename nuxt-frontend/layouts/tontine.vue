@@ -130,7 +130,7 @@
         <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
         
         <!-- All Tontines Dashboard (Admin Only) -->
-        <NuxtLink v-if="user?.role === 'admin' || user?.role === 'president'" to="/tontines-dashboard"
+        <NuxtLink v-if="canOpenTontineDashboard" to="/tontines-dashboard"
                   class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
           <Icon name="i-heroicons-building-office-2" class="w-5 h-5" />
           <span>All Tontines</span>
@@ -201,6 +201,8 @@
 </template>
 
 <script setup>
+import { canViewTontineDashboard } from '~/utils/authGuard'
+
 const sidebarOpen = ref(false)
 const tontineSidebarOpen = ref(false)
 const { user, logout } = useAuth()
@@ -209,6 +211,7 @@ const currentTontineId = ref(null)
 
 // Get tontine ID from route
 const route = useRoute()
+const canOpenTontineDashboard = computed(() => canViewTontineDashboard(user.value))
 
 const fetchCurrentTontine = async () => {
   if (!currentTontineId.value) return

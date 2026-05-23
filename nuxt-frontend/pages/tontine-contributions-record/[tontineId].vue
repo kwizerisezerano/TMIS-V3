@@ -104,19 +104,11 @@
 
                 <!-- Amount -->
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="relative w-44 rounded-xl shadow-sm">
-                    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                      <span class="text-gray-500 dark:text-gray-400 text-sm font-semibold">RWF</span>
-                    </div>
-                    <input 
-                      v-model.number="member.amount" 
-                      type="number" 
-                      min="0"
-                      :disabled="member.status === 'Not Paid'"
-                      class="block w-full rounded-xl border border-gray-300 dark:border-gray-600 pl-12 pr-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-gray-100 disabled:bg-gray-100 disabled:text-gray-400 dark:disabled:bg-gray-800/50"
-                      placeholder="0"
-                    />
-                  </div>
+                  <CurrencyInput 
+                    v-model="member.amount" 
+                    :disabled="member.status === 'Not Paid'"
+                    placeholder="0"
+                  />
                 </td>
 
                 <!-- Notes -->
@@ -156,6 +148,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'accountant',
+  layout: 'default'
+})
+
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
@@ -163,7 +160,6 @@ const { initAuth } = useAuth()
 
 const tontineId = route.params.tontineId
 
-const user = ref(null)
 const tontine = ref(null)
 const members = ref([])
 const records = ref([])
@@ -174,23 +170,6 @@ const saving = ref(false)
 onMounted(() => {
   if (process.client) {
     initAuth()
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      user.value = JSON.parse(userData)
-      // Check if user is accountant
-      if (user.value?.role !== 'accountant') {
-        toast.add({
-          title: 'Access Denied',
-          description: 'Only accountants can access this page',
-          color: 'red'
-        })
-        router.push('/tontines')
-        return
-      }
-    } else {
-      router.push('/login')
-      return
-    }
   }
   fetchData()
 })

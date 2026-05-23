@@ -41,7 +41,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-green-50 text-sm font-medium">Total Savings</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.totalContributions.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalContributions) }}</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-banknotes" class="w-6 h-6 text-white" />
@@ -65,7 +65,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-emerald-50 text-sm font-medium">Outstanding Loans</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.totalLoans.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalLoans) }}</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-credit-card" class="w-6 h-6 text-white" />
@@ -77,7 +77,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-teal-50 text-sm font-medium">Net Worth</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ Math.max(0, (stats.totalContributions - stats.totalLoans - stats.penalties.pending)).toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(Math.max(0, (stats.totalContributions - stats.totalLoans - stats.penalties.pending))) }}</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-chart-pie" class="w-6 h-6 text-white" />
@@ -127,7 +127,7 @@
                 <span class="text-sm text-gray-600 dark:text-white/70">Pending Penalties</span>
                 <Icon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-500" />
               </div>
-              <p class="text-2xl font-bold text-red-600 dark:text-red-400">RWF {{ stats.penalties.pending.toLocaleString() }}</p>
+              <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ formatDashboardAmount(stats.penalties.pending) }}</p>
               <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
                 <div class="bg-red-500 h-2 rounded-full" :style="{ width: Math.min((stats.penalties.pending / Math.max(stats.totalContributions, 1)) * 100, 100) + '%' }"></div>
               </div>
@@ -140,7 +140,7 @@
                 <span class="text-sm text-gray-600 dark:text-white/70">Paid Penalties</span>
                 <Icon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
               </div>
-              <p class="text-2xl font-bold text-green-600 dark:text-green-400">RWF {{ stats.penalties.paid.toLocaleString() }}</p>
+              <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatDashboardAmount(stats.penalties.paid) }}</p>
               <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
                 <div class="bg-green-500 h-2 rounded-full" :style="{ width: Math.min((stats.penalties.paid / Math.max(stats.totalContributions, 1)) * 100, 100) + '%' }"></div>
               </div>
@@ -232,6 +232,7 @@ if (process.client) {
   Chart.register(...registerables)
 }
 
+const { formatDashboardAmount } = useCurrency()
 const userName = ref('Member')
 const stats = ref({
   totalContributions: 0,
@@ -310,7 +311,11 @@ onMounted(async () => {
         await fetchDashboardData()
       } catch (error) {
         console.error('User validation failed:', error)
-        logout()
+        if (error?.response?.status === 401 || error?.status === 401 || error?.data?.status === 401) {
+          logout()
+        } else {
+          loading.value = false
+        }
       }
     } else {
       await navigateTo('/login')
