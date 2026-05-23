@@ -239,21 +239,21 @@
             <div class="space-y-3">
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Total Contributions</span>
-                <span class="font-semibold text-green-600">RWF {{ stats.totalContributions.toLocaleString() }}</span>
+                <span class="font-semibold text-green-600">{{ formatDashboardAmount(stats.totalContributions) }}</span>
               </div>
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Loan Repayments</span>
-                <span class="font-semibold text-blue-600">RWF {{ stats.totalLoanPaid.toLocaleString() }}</span>
+                <span class="font-semibold text-blue-600">{{ formatDashboardAmount(stats.totalLoanPaid) }}</span>
               </div>
             </div>
             <div class="space-y-3">
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Total Inflows</span>
-                <span class="font-semibold text-green-600">RWF {{ (stats.totalContributions + stats.totalLoanPaid).toLocaleString() }}</span>
+                <span class="font-semibold text-green-600">{{ formatDashboardAmount(stats.totalContributions + stats.totalLoanPaid) }}</span>
               </div>
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Loans Disbursed</span>
-                <span class="font-semibold text-amber-600">RWF {{ stats.totalLoanRequested.toLocaleString() }}</span>
+                <span class="font-semibold text-amber-600">{{ formatDashboardAmount(stats.totalLoanRequested) }}</span>
               </div>
             </div>
             <div class="space-y-3">

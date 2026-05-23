@@ -47,11 +47,11 @@
           </div>
           <div class="grid md:grid-cols-3 gap-6">
             <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-              <div class="text-2xl font-bold text-gray-700 dark:text-slate-300">RWF {{ userContributions.toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-gray-700 dark:text-slate-300">{{ formatDashboardAmount(userContributions) }}</div>
               <div class="text-sm text-gray-600 dark:text-slate-400">Your Total Contributions</div>
             </div>
             <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
-              <div class="text-2xl font-bold text-green-600">RWF {{ maxLoanAmount.toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-green-600">{{ formatDashboardAmount(maxLoanAmount) }}</div>
               <div class="text-sm text-gray-600 dark:text-slate-400">Maximum Loan (2/3 of contributions)</div>
             </div>
             <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
@@ -106,15 +106,15 @@
           <div class="grid md:grid-cols-3 gap-4 mb-6">
             <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
               <div class="text-sm text-blue-600 dark:text-blue-400 font-medium">Loan Amount</div>
-              <div class="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">RWF {{ parseFloat(activeLoan.amount).toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">{{ formatDashboardAmount(activeLoan.amount) }}</div>
             </div>
             <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 p-4 rounded-xl border border-yellow-200 dark:border-yellow-700">
               <div class="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Total to Pay (Principal + Interest)</div>
-              <div class="text-2xl font-bold text-yellow-700 dark:text-yellow-300 mt-1">RWF {{ parseFloat(activeLoan.total_amount || activeLoan.amount).toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-yellow-700 dark:text-yellow-300 mt-1">{{ formatDashboardAmount(activeLoan.total_amount || activeLoan.amount) }}</div>
             </div>
             <div class="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 p-4 rounded-xl border border-red-200 dark:border-red-700">
               <div class="text-sm text-red-600 dark:text-red-400 font-medium">Remaining Balance</div>
-              <div class="text-2xl font-bold text-red-700 dark:text-red-300 mt-1">RWF {{ calculateRemainingBalance(activeLoan).toLocaleString() }}</div>
+              <div class="text-2xl font-bold text-red-700 dark:text-red-300 mt-1">{{ formatDashboardAmount(calculateRemainingBalance(activeLoan)) }}</div>
             </div>
           </div>
           

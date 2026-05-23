@@ -42,7 +42,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-emerald-50 text-sm font-medium">Total Savings</p>
-                <p class="text-2xl font-bold mt-1">RWF {{ stats.totalContributions.toLocaleString() }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalContributions) }}</p>
                 <p class="text-xs text-emerald-100 mt-1">{{ stats.contributionCount }} contributions</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
@@ -56,7 +56,7 @@
               <div>
                 <p class="text-emerald-50 text-sm font-medium">Active Loans</p>
                 <p class="text-2xl font-bold mt-1">{{ stats.activeLoans }}</p>
-                <p class="text-xs text-emerald-100 mt-1">RWF {{ stats.totalLoans.toLocaleString() }} outstanding</p>
+                <p class="text-xs text-emerald-100 mt-1">{{ formatDashboardAmount(stats.totalLoans) }} outstanding</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-credit-card" class="w-6 h-6 text-white" />
@@ -69,7 +69,7 @@
               <div>
                 <p class="text-teal-50 text-sm font-medium">Pending Penalties</p>
                 <p class="text-2xl font-bold mt-1">{{ stats.pendingPenalties }}</p>
-                <p class="text-xs text-teal-100 mt-1">RWF {{ stats.penaltyAmount.toLocaleString() }}</p>
+                <p class="text-xs text-teal-100 mt-1">{{ formatDashboardAmount(stats.penaltyAmount) }}</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-white" />

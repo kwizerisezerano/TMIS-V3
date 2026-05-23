@@ -30,7 +30,7 @@
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="text-center p-4">
             <div v-if="loading" class="text-xl text-gray-400">Loading...</div>
-            <div v-else class="text-2xl font-bold text-green-600 dark:text-green-400">RWF {{ totalContributions.toLocaleString() }}</div>
+            <div v-else class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatDashboardAmount(totalContributions) }}</div>
             <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Contributions</div>
           </div>
         </UCard>
@@ -38,7 +38,7 @@
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="text-center p-4">
             <div v-if="loading" class="text-xl text-gray-400">Loading...</div>
-            <div v-else class="text-2xl font-bold text-blue-600 dark:text-blue-400">RWF {{ totalLoanPayments.toLocaleString() }}</div>
+            <div v-else class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ formatDashboardAmount(totalLoanPayments) }}</div>
             <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Loan Payments</div>
           </div>
         </UCard>
@@ -46,7 +46,7 @@
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="text-center p-4">
             <div v-if="loading" class="text-xl text-gray-400">Loading...</div>
-            <div v-else class="text-2xl font-bold text-red-600 dark:text-red-400">RWF {{ totalPenaltyPayments.toLocaleString() }}</div>
+            <div v-else class="text-2xl font-bold text-red-600 dark:text-red-400">{{ formatDashboardAmount(totalPenaltyPayments) }}</div>
             <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Total Penalty Payments</div>
           </div>
         </UCard>
@@ -208,6 +208,7 @@
 </template>
 
 <script setup>
+const { formatDashboardAmount } = useCurrency()
 const { user, initAuth } = useAuth()
 
 const activeTab = ref('contributions')

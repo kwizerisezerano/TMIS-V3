@@ -108,19 +108,17 @@
           </div>
           
           <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="text-center p-4 bg-green-50 rounded-lg">
-              <div class="text-2xl font-bold text-green-600">RWF {{ stats.totalContributions.toLocaleString() }}</div>
-              <div class="text-sm text-gray-600">Total Contributions</div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+              <div class="text-sm text-gray-500 dark:text-slate-400">Total Contributions</div>
+              <div class="text-2xl font-bold text-green-600">{{ formatDashboardAmount(stats.totalContributions) }}</div>
             </div>
-            
-            <div class="text-center p-4 bg-blue-50 rounded-lg">
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+              <div class="text-sm text-gray-500 dark:text-slate-400">Active Tontines</div>
               <div class="text-2xl font-bold text-blue-600">{{ stats.activeTontines }}</div>
-              <div class="text-sm text-gray-600">Active Tontines</div>
             </div>
-            
-            <div class="text-center p-4 bg-purple-50 rounded-lg">
-              <div class="text-2xl font-bold text-purple-600">RWF {{ stats.totalLoans.toLocaleString() }}</div>
-              <div class="text-sm text-gray-600">Total Loans</div>
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm">
+              <div class="text-sm text-gray-500 dark:text-slate-400">Total Loans</div>
+              <div class="text-2xl font-bold text-purple-600">{{ formatDashboardAmount(stats.totalLoans) }}</div>
             </div>
           </div>
         </div>
@@ -130,6 +128,7 @@
 </template>
 
 <script setup>
+const { formatDashboardAmount } = useCurrency()
 const loading = ref(true)
 const profileData = ref({})
 const stats = ref({
