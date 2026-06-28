@@ -391,7 +391,7 @@
     <UModal v-model="showMeetingModal">
       <UCard>
         <template #header>
-          <h3 class="text-lg font-semibold">{{ editingMeeting.id ? 'Edit Meeting' : 'Create New Meeting' }}</h3>
+          <h3 class="text-lg font-semibold">{{ editingMeeting?.id ? 'Edit Meeting' : 'Create New Meeting' }}</h3>
         </template>
 
         <UForm :state="meetingForm" @submit="saveMeeting" class="space-y-4">
@@ -404,7 +404,7 @@
           </UFormGroup>
 
           <UFormGroup label="Agenda" name="agenda" required>
-            <UTextarea v-model="meetingForm.agenda" placeholder="Enter meeting agenda (topics to discuss)" rows="4" />
+            <UTextarea v-model="meetingForm.agenda" placeholder="Enter meeting agenda (topics to discuss)" :rows="4" />
           </UFormGroup>
 
           <UFormGroup label="Meeting Date & Time" name="meetingDate" required>
@@ -424,7 +424,7 @@
               Cancel
             </UButton>
             <UButton type="submit" :loading="submittingMeeting" color="green">
-              {{ editingMeeting.id ? 'Update Meeting' : 'Create Meeting' }}
+              {{ editingMeeting?.id ? 'Update Meeting' : 'Create Meeting' }}
             </UButton>
           </div>
         </UForm>
