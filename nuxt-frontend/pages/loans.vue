@@ -22,7 +22,7 @@
             <div class="text-gray-500">No active tontines found</div>
           </div>
           <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div v-for="tontine in userTontines" :key="tontine.id" 
+            <div v-for="tontine in userTontines" :key="tontine.id"
                  @click="selectTontine(tontine)"
                  class="p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600 transition-colors border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800">
               <h3 class="font-semibold text-lg">{{ tontine.name }}</h3>
@@ -368,6 +368,7 @@
 
 <script setup>
 const { user, initAuth } = useAuth()
+const { formatDashboardAmount } = useCurrency()
 
 const showLoanModal = ref(false)
 const showPaymentModal = ref(false)
@@ -379,7 +380,6 @@ const loans = ref([])
 const selectedTontine = ref(null)
 const userTontines = ref([])
 const contributionsByTontine = ref({})
-const hasActiveLoan = ref(false)
 const activeLoan = ref(null)
 const maxLoanAmount = ref(0)
 const userContributions = ref(0)
@@ -398,6 +398,7 @@ const loanPaymentPhone = ref('')
 const guarantors = ref([])
 
 const requestedLoanAmount = computed(() => parseFloat(loanAmount.value || 0))
+const hasActiveLoan = computed(() => !!activeLoan.value)
 const isNewLoanButtonDisabled = computed(() => hasActiveLoan.value)
 const newLoanButtonLabel = computed(() => {
   if (hasActiveLoan.value) return 'Active Loan Exists'
@@ -495,12 +496,13 @@ const fetchUserTontines = async () => {
     const contributionsData = contributionsRes.data || contributionsRes
     const contributionsList = Array.isArray(contributionsData) ? contributionsData : (contributionsData.data || [])
 
-    // Group contributions by tontine
+    // Group contributions by tontine (ensure tontine_id is treated as number for consistency)
     contributionsByTontine.value = contributionsList.reduce((acc, contrib) => {
-      if (!acc[contrib.tontine_id]) {
-        acc[contrib.tontine_id] = []
+      const tontineId = parseInt(contrib.tontine_id)
+      if (!acc[tontineId]) {
+        acc[tontineId] = []
       }
-      acc[contrib.tontine_id].push(contrib)
+      acc[tontineId].push(contrib)
       return acc
     }, {})
   } catch (error) {
@@ -522,9 +524,9 @@ const selectTontine = async (tontine) => {
 
 const getTontineContributions = (tontineId) => {
   const tontineContribs = contributionsByTontine.value[tontineId] || []
-  return tontineContribs
-    .filter(c => c.payment_status === 'Approved')
-    .reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
+  const filtered = tontineContribs.filter(c => c.payment_status === 'Approved')
+  const total = filtered.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
+  return total
 }
 
 const fetchLoans = async () => {
@@ -549,10 +551,10 @@ const fetchLoans = async () => {
     loans.value = loansList.filter(l => l.tontine_id == selectedTontine.value.id)
     console.log('Filtered loans:', loans.value)
 
-      // Find active loan (pending, approved, waiting, received, disbursed statuses)
+      // Find active loan (only pending, approved, waiting, received statuses - disbursed means already received)
       activeLoan.value = loans.value.find(loan => {
         const status = (loan.status || '').toLowerCase()
-        return ['pending', 'approved', 'waiting', 'received', 'disbursed'].includes(status)
+        return ['pending', 'approved', 'waiting', 'received'].includes(status)
       })
       if (activeLoan.value) {
         // Fetch loan payments for balance calculation

@@ -245,6 +245,9 @@ const fetchDashboardData = async () => {
       tontineName.value = tontine.name
       stats.value.totalMembers = parseInt(tontine.member_count) || 0
       stats.value.activeMembers = parseInt(tontine.member_count) || 0
+    } else {
+      loading.value = false
+      return
     }
     
     // 2. Fetch all contributions and filter by tontine

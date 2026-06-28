@@ -1016,7 +1016,8 @@ const addMember = async () => {
       }
     })
     
-    if (response.success) {
+    // Handle both response.success and HTTP status 200
+      if (response.success || response.status === 200) {
       // Show success message in modal
       addSuccess.value = `${newMember.value.names} has been added successfully! Welcome email sent with login credentials.`
       
@@ -1131,7 +1132,8 @@ const confirmDelete = async () => {
   try {
     const response = await api(`/v1/members/${memberToDelete.value.id}`, { method: 'DELETE' })
     
-    if (response.success) {
+    // Handle both response.success and HTTP status 200
+      if (response.success || response.status === 200) {
       await fetchMembers()
       modal.showSuccess(
         `${memberToDelete.value.names} has been removed from the tontine successfully.`,
@@ -1453,10 +1455,13 @@ const saveMeeting = async () => {
         body: payload
       })
 
-      if (response.success) {
+      // Handle both response.success and HTTP status 200
+      if (response.success || response.status === 200) {
         toast.add({ title: 'Success', description: 'Meeting updated successfully', color: 'green' })
         closeMeetingModal()
         await fetchMeetings()
+      } else {
+        toast.add({ title: 'Error', description: response.message || 'Failed to update meeting', color: 'red' })
       }
     } else {
       // Create new meeting
@@ -1465,10 +1470,13 @@ const saveMeeting = async () => {
         body: payload
       })
 
-      if (response.success) {
+      // Handle both response.success and HTTP status 201
+      if (response.success || response.status === 201) {
         toast.add({ title: 'Success', description: 'Meeting created successfully', color: 'green' })
         closeMeetingModal()
         await fetchMeetings()
+      } else {
+        toast.add({ title: 'Error', description: response.message || 'Failed to create meeting', color: 'red' })
       }
     }
   } catch (error) {
@@ -1490,7 +1498,8 @@ const deleteMeeting = (meeting) => {
     async () => {
       try {
         const response = await api(`/v1/meetings/${meeting.id}`, { method: 'DELETE' })
-        if (response.success) {
+        // Handle both response.success and HTTP status 200
+      if (response.success || response.status === 200) {
           toast.add({ title: 'Success', description: 'Meeting deleted successfully', color: 'green' })
           await fetchMeetings()
           modal.showSuccess('Meeting has been deleted successfully.', 'Meeting Deleted')
@@ -1531,7 +1540,8 @@ const markPenaltyPaid = async (penalty) => {
           method: 'PUT',
           body: { status: 'paid', paid_at: new Date().toISOString() }
         })
-        if (response.success) {
+        // Handle both response.success and HTTP status 200
+      if (response.success || response.status === 200) {
           toast.add({ title: 'Success', description: 'Penalty marked as paid', color: 'green' })
           await fetchPenalties()
           modal.showSuccess('Penalty has been marked as paid.', 'Penalty Paid')
@@ -1546,3 +1556,4 @@ const markPenaltyPaid = async (penalty) => {
 }
 
 </script>
+

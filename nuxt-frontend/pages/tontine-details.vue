@@ -140,7 +140,8 @@ const fetchTontineDetails = async () => {
   try {
     const response = await api(`/v1/tontines/${tontineId}`)
     // API returns { status, success, message, data }
-    const data = response.data || response
+    // Handle both direct data and wrapped response structures
+    const data = response?.data || response
     tontine.value = data
     // Extract members if available
     if (data?.members) {
@@ -148,6 +149,7 @@ const fetchTontineDetails = async () => {
     }
   } catch (error) {
     console.error('Failed to fetch tontine details:', error)
+    tontine.value = null
   } finally {
     loading.value = false
   }
