@@ -551,7 +551,7 @@ const fetchLoans = async () => {
     loans.value = loansList.filter(l => l.tontine_id == selectedTontine.value.id)
     console.log('Filtered loans:', loans.value)
 
-      // Find active loan (only pending, approved, waiting, received statuses - disbursed means already received)
+      // Find active loan - users with pending, approved, waiting, or received loans cannot apply for new loans
       activeLoan.value = loans.value.find(loan => {
         const status = (loan.status || '').toLowerCase()
         return ['pending', 'approved', 'waiting', 'received'].includes(status)

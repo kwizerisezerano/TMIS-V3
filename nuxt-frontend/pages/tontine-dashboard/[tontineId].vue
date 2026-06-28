@@ -197,6 +197,7 @@ if (process.client) {
 
 const route = useRoute()
 const tontineId = computed(() => route.params.tontineId)
+const { formatDashboardAmount } = useCurrency()
 
 const loading = ref(true)
 const tontineName = ref('')
