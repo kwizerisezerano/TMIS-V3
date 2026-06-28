@@ -346,7 +346,7 @@ async function setupDatabase() {
       ['NDAGIJIMANA Florien', 'tabitakwizerisezerano@gmail.com', '0788570890', 'admin'], // President
       ['Dr. Athanase HATEGEKIMANA', 'kwizerisezerano@gmail.com', '0788738036', 'admin'], // V/President
       ['NIYONGOMBWA Didier', 'akayezuberna@gmail.com', '0788602741', 'accountant'], // Secretary/Accountant
-      ['RUZIGANA Victor', 'victor@thefuture.com', '0788679876', 'member'], // Advisor
+      ['RUZIGANA Victor', 'kwizerisezerano250@gmail.com', '0788679876', 'member'], // Advisor
       ['HABIMANA Adolphe', 'adolphe@thefuture.com', '0788565026', 'member'], // Advisor
       ['KWIZERA Ivan', 'ivan@thefuture.com', '0788828128', 'member'], // Auditor President
       ['DUSABIMANA Edmond', 'edmond@thefuture.com', '0788786066', 'member'], // Auditor V/President
