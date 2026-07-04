@@ -226,9 +226,17 @@ const fetchTontines = async () => {
 
     const response = await api('/v1/tontines', { params })
     // API returns { status, success, message, data }
-    const data = response.data || response
+    let data = response.data || response
     // Data may be paginated with .data array or direct array
-    tontines.value = Array.isArray(data) ? data : (data.data || [])
+    let tontineData = Array.isArray(data) ? data : (data.data || [])
+    // Parse numeric fields to prevent string concatenation issues
+    tontines.value = tontineData.map(t => ({
+      ...t,
+      member_count: parseInt(t.member_count || 0, 10),
+      max_members: parseInt(t.max_members || 0, 10),
+      contribution_amount: parseFloat(t.contribution_amount || 0),
+      total_contributions: parseFloat(t.total_contributions || 0)
+    }))
   } catch (error) {
     console.error('Failed to fetch tontines:', error)
     tontines.value = []
@@ -249,13 +257,22 @@ const fetchUserTontines = async () => {
     })
     const data = response.data || response
     // Handle paginated response
+    let userTontineData
     if (data.data && Array.isArray(data.data)) {
-      userTontines.value = data.data
+      userTontineData = data.data
     } else if (Array.isArray(data)) {
-      userTontines.value = data
+      userTontineData = data
     } else {
-      userTontines.value = []
+      userTontineData = []
     }
+    // Parse numeric fields
+    userTontines.value = userTontineData.map(t => ({
+      ...t,
+      member_count: parseInt(t.member_count || 0, 10),
+      max_members: parseInt(t.max_members || 0, 10),
+      contribution_amount: parseFloat(t.contribution_amount || 0),
+      total_contributions: parseFloat(t.total_contributions || 0)
+    }))
   } catch (error) {
     console.error('Failed to fetch user tontines:', error)
     userTontines.value = []

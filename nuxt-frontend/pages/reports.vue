@@ -9,15 +9,24 @@
             Financial Reports
           </h1>
           <p class="text-gray-600 dark:text-slate-400 mt-1">
-            {{ isAdmin ? 'Tontine-wide financial analytics and insights' : 'Your personal financial overview' }}
+            {{ (isAdmin && showAdminReports) ? 'Tontine-wide financial analytics and insights' : 'Your personal financial overview' }}
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+          <!-- Toggle for admin reports -->
           <div v-if="isAdmin" class="flex items-center gap-2">
+            <button 
+              @click="showAdminReports = !showAdminReports; fetchReportsData()" 
+              class="px-4 py-2 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              {{ showAdminReports ? 'View My Reports' : 'View Admin Reports' }}
+            </button>
+          </div>
+          <div class="flex items-center gap-2">
             <label class="text-sm font-medium text-gray-700 dark:text-white whitespace-nowrap">Tontine:</label>
             <select v-model="selectedTontine" @change="fetchReportsData" class="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm">
               <option value="">All Tontines</option>
-              <option v-for="tontine in tontines" :key="tontine.id" :value="tontine.id">
+              <option v-for="tontine in ((isAdmin && showAdminReports) ? tontines : userTontines)" :key="tontine.id" :value="tontine.id">
                 {{ tontine.name }}
               </option>
             </select>
@@ -108,14 +117,14 @@
         <UCard class="border-0 shadow-lg bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-800/20">
           <div class="p-6">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-violet-700 dark:text-violet-300">Active Members</span>
+              <span class="text-sm font-medium text-violet-700 dark:text-violet-300">{{ (isAdmin && showAdminReports) ? 'Active Members' : 'Your Tontines' }}</span>
               <div class="p-2 bg-violet-200 dark:bg-violet-800 rounded-lg">
-                <Icon name="i-heroicons-users" class="w-5 h-5 text-violet-700 dark:text-violet-300" />
+                <Icon :name="(isAdmin && showAdminReports) ? 'i-heroicons-users' : 'i-heroicons-building-library'" class="w-5 h-5 text-violet-700 dark:text-violet-300" />
               </div>
             </div>
-            <div class="text-2xl font-bold text-violet-800 dark:text-violet-200">{{ isAdmin ? stats.totalMembers : userTontines.length }}</div>
+            <div class="text-2xl font-bold text-violet-800 dark:text-violet-200">{{ (isAdmin && showAdminReports) ? stats.totalMembers : userTontines.length }}</div>
             <div class="flex items-center mt-2 text-xs text-violet-600 dark:text-violet-400">
-              <span>{{ isAdmin ? tontines.length + ' tontines' : 'Active memberships' }}</span>
+              <span>{{ (isAdmin && showAdminReports) ? tontines.length + ' tontines' : 'Active memberships' }}</span>
             </div>
           </div>
         </UCard>
@@ -136,7 +145,7 @@
                 <thead>
                   <tr class="border-b-2 border-gray-200 dark:border-slate-600">
                     <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin">Member</th>
+                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin && showAdminReports">Member</th>
                     <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Tontine</th>
                     <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Amount</th>
                     <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Status</th>
@@ -145,7 +154,7 @@
                 <tbody>
                   <tr v-for="item in contributions" :key="item.id" class="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td class="py-3 px-4 text-gray-900 dark:text-white">{{ formatDate(item.created_at) }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin">{{ item.user_name || 'N/A' }}</td>
+                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin && showAdminReports">{{ item.user_name || 'N/A' }}</td>
                     <td class="py-3 px-4 text-gray-900 dark:text-white">{{ item.tontine_name || 'N/A' }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-green-600">RWF {{ parseFloat(item.amount || 0).toLocaleString() }}</td>
                     <td class="py-3 px-4 text-center">
@@ -172,7 +181,7 @@
                 <thead>
                   <tr class="border-b-2 border-gray-200 dark:border-slate-600">
                     <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin">Member</th>
+                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin && showAdminReports">Member</th>
                     <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Tontine</th>
                     <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Amount</th>
                     <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Status</th>
@@ -181,7 +190,7 @@
                 <tbody>
                   <tr v-for="item in loans" :key="item.id" class="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td class="py-3 px-4 text-gray-900 dark:text-white">{{ formatDate(item.created_at) }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin">{{ item.user_name || 'N/A' }}</td>
+                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin && showAdminReports">{{ item.user_name || 'N/A' }}</td>
                     <td class="py-3 px-4 text-gray-900 dark:text-white">{{ item.tontine_name || 'N/A' }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-amber-600">RWF {{ parseFloat(item.amount || 0).toLocaleString() }}</td>
                     <td class="py-3 px-4 text-center">
@@ -208,7 +217,7 @@
                 <thead>
                   <tr class="border-b-2 border-gray-200 dark:border-slate-600">
                     <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin">Member</th>
+                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin && showAdminReports">Member</th>
                     <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Reason</th>
                     <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Amount</th>
                     <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Status</th>
@@ -217,7 +226,7 @@
                 <tbody>
                   <tr v-for="item in penalties" :key="item.id" class="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td class="py-3 px-4 text-gray-900 dark:text-white">{{ formatDate(item.created_at) }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin">{{ item.user_name || 'N/A' }}</td>
+                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin && showAdminReports">{{ item.user_name || 'N/A' }}</td>
                     <td class="py-3 px-4 text-gray-900 dark:text-white truncate max-w-xs" :title="item.reason">{{ item.reason || 'N/A' }}</td>
                     <td class="py-3 px-4 text-right font-semibold text-red-600">RWF {{ parseFloat(item.amount || 0).toLocaleString() }}</td>
                     <td class="py-3 px-4 text-center">
@@ -268,12 +277,12 @@
             </div>
             <div class="space-y-3">
               <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Total Members</span>
-                <span class="font-semibold text-violet-600">{{ isAdmin ? stats.totalMembers : userTontines.length }}</span>
+                <span class="text-gray-600 dark:text-slate-400 text-sm">{{ (isAdmin && showAdminReports) ? 'Total Members' : 'Your Tontines' }}</span>
+                <span class="font-semibold text-violet-600">{{ (isAdmin && showAdminReports) ? stats.totalMembers : userTontines.length }}</span>
               </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
+              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700" v-if="isAdmin && showAdminReports">
                 <span class="text-gray-600 dark:text-slate-400 text-sm">Tontines</span>
-                <span class="font-semibold text-violet-600">{{ isAdmin ? tontines.length : userTontines.length }}</span>
+                <span class="font-semibold text-violet-600">{{ tontines.length }}</span>
               </div>
             </div>
             <div class="space-y-3">
@@ -317,19 +326,26 @@ const userTontines = ref([])
 const selectedTontine = ref('')
 const dateRange = ref('30')
 const isAdmin = computed(() => isAdminOnly(user.value))
+const showAdminReports = ref(true) // Toggle for admin to switch between admin and personal reports
 const contributionTrend = ref(null)
 const loanTrend = ref(null)
+const isLoading = ref(false)
 
 onMounted(async () => {
   if (process.client) {
     initAuth()
     if (user.value) {
       if (isAdmin.value) {
-        await fetchTontines()
-        const route = useRoute()
-        if (route.query.tontine) {
-          selectedTontine.value = route.query.tontine
-        }
+        await Promise.all([
+          fetchTontines(),
+          fetchUserTontines()
+        ])
+      } else {
+        await fetchUserTontines()
+      }
+      const route = useRoute()
+      if (route.query.tontine) {
+        selectedTontine.value = route.query.tontine
       }
       await fetchReportsData()
     }
@@ -340,21 +356,44 @@ const fetchTontines = async () => {
   const { api } = useApi()
   try {
     const response = await api('/v1/tontines')
-    tontines.value = response.data || []
+    let data = response.data || response
+    tontines.value = Array.isArray(data) ? data : (data.data || [])
   } catch (error) {
     console.error('Failed to fetch tontines:', error)
   }
 }
 
+const fetchUserTontines = async () => {
+  const { api } = useApi()
+  try {
+    const response = await api('/v1/tontines', { params: { userId: user.value.id } })
+    let data = response.data || response
+    let userTontineData = Array.isArray(data) ? data : (data.data || [])
+    // Parse numeric fields
+    userTontines.value = userTontineData.map(t => ({
+      ...t,
+      member_count: parseInt(t.member_count || 0, 10),
+      max_members: parseInt(t.max_members || 0, 10),
+      contribution_amount: parseFloat(t.contribution_amount || 0),
+      total_contributions: parseFloat(t.total_contributions || 0)
+    }))
+  } catch (error) {
+    console.error('Failed to fetch user tontines:', error)
+  }
+}
+
 const fetchReportsData = async () => {
   try {
-    if (isAdmin.value) {
+    isLoading.value = true
+    if (isAdmin.value && showAdminReports.value) {
       await fetchAdminReports()
     } else {
       await fetchUserReports()
     }
   } catch (error) {
     console.error('Failed to fetch reports data:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -426,16 +465,16 @@ const fetchAdminReports = async () => {
       : 0
     
     if (selectedTontine.value) {
-      const tontineResponse = await api(`/v1/tontines/${selectedTontine.value}`)
-      const tontineData = tontineResponse.data || {}
-      stats.value.totalMembers = tontineData.member_count || tontineData.members?.length || 0
-    } else {
-      let totalMembers = 0
-      for (const tontine of tontines.value) {
-        totalMembers += tontine.member_count || 0
+        const tontineResponse = await api(`/v1/tontines/${selectedTontine.value}`)
+        const tontineData = tontineResponse.data || {}
+        stats.value.totalMembers = parseInt(tontineData.member_count || tontineData.members?.length || 0, 10)
+      } else {
+        let totalMembers = 0
+        for (const tontine of tontines.value) {
+          totalMembers += parseInt(tontine.member_count || 0, 10)
+        }
+        stats.value.totalMembers = totalMembers
       }
-      stats.value.totalMembers = totalMembers
-    }
     
     contributions.value = contributionsFiltered
     loans.value = loansFiltered
@@ -569,14 +608,21 @@ const fetchUserReports = async () => {
     }
 
     const contributionsRes = await api('/v1/contributions', { params: { userId: user.value.id } })
-    const contributionsData = extractData(contributionsRes)
+    let contributionsData = extractData(contributionsRes)
     
     const loansRes = await api('/v1/loans', { params: { userId: user.value.id } })
-    const loansData = extractData(loansRes)
+    let loansData = extractData(loansRes)
     
     const paymentsRes = await api('/v1/payments/history', { params: { userId: user.value.id } })
     const paymentsData = (paymentsRes.data && paymentsRes.data.data) || paymentsRes.data || {}
-    const loanPayments = paymentsData.loanPayments || []
+    let loanPayments = paymentsData.loanPayments || []
+    
+    // Filter by selected tontine if specified
+    if (selectedTontine.value) {
+      contributionsData = contributionsData.filter(c => c.tontine_id == selectedTontine.value)
+      loansData = loansData.filter(l => l.tontine_id == selectedTontine.value)
+      loanPayments = loanPayments.filter(p => p.tontine_id == selectedTontine.value)
+    }
     
     stats.value.totalContributions = contributionsData
       .filter(c => c.payment_status === 'Approved')
@@ -601,8 +647,13 @@ const fetchUserReports = async () => {
     loans.value = loansData
     penalties.value = []
     
-    const tontinesRes = await api('/v1/tontines', { params: { userId: user.value.id } })
-    userTontines.value = extractData(tontinesRes)
+    // Update active members display
+    if (selectedTontine.value) {
+      const selectedTontineData = userTontines.value.find(t => t.id == selectedTontine.value)
+      stats.value.totalMembers = selectedTontineData?.member_count || 0
+    } else {
+      stats.value.totalMembers = userTontines.value.length
+    }
     
     contributionTrend.value = Math.floor(Math.random() * 20) - 5
     loanTrend.value = Math.floor(Math.random() * 30) - 10

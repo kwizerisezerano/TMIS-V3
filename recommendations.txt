@@ -1,0 +1,4 @@
+1.both member and tontine level
+2.loan page must show loan taken date and loan repayment date
+3.for countant about recording payments review amount amount being recorded
+4.test automaticon(check if members who didn't contribute and loan repayment daye exceed must get fines
