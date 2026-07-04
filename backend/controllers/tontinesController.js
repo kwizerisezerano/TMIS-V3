@@ -264,7 +264,7 @@ class TontinesController {
       
       // Support both camelCase and snake_case field names
       const finalDescription = description || null;
-      const finalContributionAmount = (contributionAmount || contribution_amount) !== undefined ? (contributionAmount || contribution_amount).toString() : null;
+      const finalContributionAmount = (contributionAmount || contribution_amount) !== undefined ? parseFloat(contributionAmount || contribution_amount) : null;
       const finalMaxMembers = (maxMembers || max_members) !== undefined ? Number(maxMembers || max_members) : null;
       const finalStartDate = startDate || start_date || null;
       const finalEndDate = endDate || end_date || null;
@@ -357,7 +357,7 @@ class TontinesController {
       
       // Support both camelCase and snake_case field names
       const finalDescription = description || null;
-      const finalContributionAmount = (contributionAmount || contribution_amount) !== undefined ? (contributionAmount || contribution_amount).toString() : null;
+      const finalContributionAmount = (contributionAmount || contribution_amount) !== undefined ? parseFloat(contributionAmount || contribution_amount) : null;
       const finalContributionFrequency = contributionFrequency || contribution_frequency || null;
       const finalMaxMembers = (maxMembers || max_members) !== undefined ? Number(maxMembers || max_members) : null;
       const finalStartDate = startDate || start_date || null;

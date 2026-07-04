@@ -320,7 +320,7 @@ class ContributionsController {
         return res.status(400).json(ERROR_RESPONSES.validation('Valid contribution amount is required'));
       }
       
-      const finalAmount = amount.toString();
+      const finalAmount = parseFloat(amount);
 
       // Check if user is member of tontine
       const [membership] = await this.db.execute(
@@ -771,7 +771,7 @@ class ContributionsController {
         }
 
         // Validate amount
-        const finalAmount = amount !== undefined ? amount.toString() : '0.00';
+        const finalAmount = amount !== undefined ? parseFloat(amount) : 0.00;
         if (isNaN(parseFloat(finalAmount)) || parseFloat(finalAmount) < 0) {
           console.log(`[Contributions] Skipping invalid amount: ${amount} (userId: ${userId})`);
           continue; // Skip invalid amounts

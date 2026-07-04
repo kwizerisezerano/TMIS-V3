@@ -25,16 +25,21 @@ class LoansController {
   // Helper method to calculate loan interest
   // If loan amount exceeds 2/3 of contribution, apply 15% flat interest rate
   calculateLoanInterest(loanAmount, months = 6, totalContributions = 0) {
-    const twoThirdsOfContribution = (totalContributions * 2) / 3;
+    // Parse all inputs to numbers to ensure correct calculations
+    const numLoanAmount = parseFloat(loanAmount);
+    const numMonths = parseInt(months, 10);
+    const numTotalContributions = parseFloat(totalContributions);
     
-    if (loanAmount > twoThirdsOfContribution && totalContributions > 0) {
+    const twoThirdsOfContribution = (numTotalContributions * 2) / 3;
+    
+    if (numLoanAmount > twoThirdsOfContribution && numTotalContributions > 0) {
       // Apply 15% flat interest rate for loans exceeding 2/3 of contribution
       const flatRate = 15; // 15% flat
-      const totalInterest = (loanAmount * flatRate) / 100;
+      const totalInterest = (numLoanAmount * flatRate) / 100;
       return {
-        monthlyInterest: totalInterest / months,
+        monthlyInterest: totalInterest / numMonths,
         totalInterest,
-        totalAmount: loanAmount + totalInterest,
+        totalAmount: numLoanAmount + totalInterest,
         interestRate: flatRate,
         isExceedsLimit: true
       };
@@ -42,11 +47,11 @@ class LoansController {
     
     // Normal interest rate: 1.7% per month as per Article 28
     const monthlyRate = 1.7;
-    const monthlyInterest = (loanAmount * monthlyRate) / 100;
+    const monthlyInterest = (numLoanAmount * monthlyRate) / 100;
     return {
       monthlyInterest,
-      totalInterest: monthlyInterest * months,
-      totalAmount: loanAmount + (monthlyInterest * months),
+      totalInterest: monthlyInterest * numMonths,
+      totalAmount: numLoanAmount + (monthlyInterest * numMonths),
       interestRate: monthlyRate,
       isExceedsLimit: false
     };
@@ -366,7 +371,7 @@ class LoansController {
       // Support both camelCase and snake_case field names
       const finalUserId = userId || user_id;
       const finalTontineId = tontineId || tontine_id;
-      const finalLoanAmount = (loanAmount || loan_amount || amount) !== undefined ? (loanAmount || loan_amount || amount).toString() : null;
+      const finalLoanAmount = (loanAmount || loan_amount || amount) !== undefined ? parseFloat(loanAmount || loan_amount || amount) : null;
       const finalPhoneNumber = phoneNumber || phone_number;
       const finalRepaymentPeriod = repaymentPeriod || repayment_period || 6;
 
@@ -391,7 +396,7 @@ class LoansController {
       }
 
       // Validate loan amount
-      if (isNaN(parseFloat(finalLoanAmount)) || parseFloat(finalLoanAmount) <= 0) {
+      if (isNaN(finalLoanAmount) || finalLoanAmount <= 0) {
         return ResponseHelpers.sendValidationResponse(res, 'Valid loan amount is required');
       }
 

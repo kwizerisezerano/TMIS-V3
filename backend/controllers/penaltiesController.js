@@ -183,7 +183,7 @@ class PenaltiesController {
       const { userId, tontineId, type, amount, reason } = req.body;
 
       // Support both camelCase and snake_case field names
-      const finalAmount = amount !== undefined ? amount.toString() : null;
+      const finalAmount = amount !== undefined ? parseFloat(amount) : null;
 
       // Validate required fields
       if (!userId || !tontineId || !type || !finalAmount || !reason) {

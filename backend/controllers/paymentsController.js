@@ -335,7 +335,7 @@ class PaymentsController {
       const finalTontineId = tontineId || tontine_id;
       const finalPaymentMethod = paymentMethod || payment_method;
       const finalPaymentData = paymentData || payment_data;
-      const finalAmount = amount !== undefined && amount !== null ? amount.toString() : null;
+      const finalAmount = amount !== undefined && amount !== null ? parseFloat(amount) : null;
 
       // Validate required fields
       if (!finalUserId || !finalTontineId || !finalAmount || !finalPaymentMethod) {
@@ -512,7 +512,7 @@ class PaymentsController {
       // Support both camelCase and snake_case field names
       const finalUserId = userId || user_id;
       const finalLoanId = loanId || loan_id;
-      const finalAmount = (amount || paymentAmount) !== undefined && (amount || paymentAmount) !== null ? (amount || paymentAmount).toString() : null;
+      const finalAmount = (amount || paymentAmount) !== undefined && (amount || paymentAmount) !== null ? parseFloat(amount || paymentAmount) : null;
       const finalPaymentMethod = paymentMethod || payment_method;
       const finalPaymentData = paymentData || payment_data;
 
