@@ -537,7 +537,7 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           <div class="md:col-span-2 space-y-4">
             <div class="flex items-center gap-3">
-              <img src="/assets/logo/logo.png" alt="The Future"
+              <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="The Future"
                    class="h-14 w-14 rounded-full object-cover" />
               <span class="text-xl font-bold text-gray-900 dark:text-white">The Future</span>
             </div>

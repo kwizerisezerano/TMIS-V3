@@ -4,7 +4,7 @@
     <nav class="absolute top-0 left-0 right-0 z-50 px-0 py-5">
       <div class="flex items-center justify-between">
         <NuxtLink to="/" class="flex items-center gap-3 pl-16">
-          <img src="~/assets/logo/logo.png" alt="Logo" class="w-20 h-20 object-contain brightness-0 invert" />
+          <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="Logo" class="w-20 h-20 object-contain brightness-0 invert" />
           <span class="font-bold text-2xl text-white">The Future</span>
         </NuxtLink>
         <div class="flex items-center gap-10 pr-16">

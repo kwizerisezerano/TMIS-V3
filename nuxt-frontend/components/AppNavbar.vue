@@ -3,7 +3,7 @@
     <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <div class="flex items-center space-x-3">
-          <img src="/assets/logo/logo.png" alt="The Future" class="h-16 w-16 rounded-full object-cover" />
+          <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="The Future" class="h-16 w-16 rounded-full object-cover" />
           <span class="text-xl font-bold text-gray-900 dark:text-white">The Future</span>
         </div>
         

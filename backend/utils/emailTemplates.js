@@ -19,7 +19,7 @@ const getBaseTemplate = (title, content) => {
             <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
               <tr>
                 <td style="background: #ffffff; padding: 40px 30px 0 30px; text-align: center;">
-                  <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1782657752/logo_h0umin.png" alt="The Future Logo" style="width: 60px; height: 60px; margin-bottom: 12px;">
+                  <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="The Future Logo" style="width: 60px; height: 60px; margin-bottom: 12px;">
                   <h1 style="color: #059669; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">The Future</h1>
                   <p style="color: #047857; margin: 6px 0 0 0; font-size: 15px; font-weight: 500;">Digital Tontine Management System</p>
                 </td>

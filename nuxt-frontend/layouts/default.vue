@@ -9,7 +9,7 @@
       <!-- Logo -->
       <NuxtLink to="/dashboard" class="flex items-center justify-between h-20 px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
         <div class="flex items-center gap-3">
-          <img src="~/assets/logo/logo.png" alt="The Future Logo" class="w-12 h-12 object-contain" />
+          <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="The Future Logo" class="w-12 h-12 object-contain" />
           <span class="font-bold text-xl text-gray-900 dark:text-white">The Future</span>
         </div>
       </NuxtLink>
@@ -142,7 +142,7 @@
             <Icon name="i-heroicons-bars-3" class="w-6 h-6 text-gray-600 dark:text-white" />
           </button>
           <div class="flex items-center gap-2">
-            <img src="~/assets/logo/logo.png" alt="Logo" class="w-8 h-8 object-contain" />
+            <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="Logo" class="w-8 h-8 object-contain" />
             <span class="font-bold text-lg text-gray-900 dark:text-white">The Future</span>
           </div>
           <div class="w-10"></div>

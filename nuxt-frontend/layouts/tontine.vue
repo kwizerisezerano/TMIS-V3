@@ -7,7 +7,7 @@
       aria-label="Main navigation">
       <!-- Logo - Mini -->
       <NuxtLink to="/dashboard" class="flex items-center justify-center h-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        <img src="~/assets/logo/logo.png" alt="Logo" class="w-10 h-10 object-contain" />
+        <img src="https://res.cloudinary.com/danzeqybu/image/upload/v1783173071/logo_yfob25.png" alt="Logo" class="w-10 h-10 object-contain" />
       </NuxtLink>
 
       <!-- Mini Navigation -->
