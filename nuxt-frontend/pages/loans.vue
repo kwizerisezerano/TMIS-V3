@@ -121,6 +121,14 @@
           <!-- Additional Details -->
           <div class="grid md:grid-cols-3 gap-4 mb-6">
             <div class="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
+              <div class="text-sm text-gray-500 dark:text-gray-400">Date Taken</div>
+              <div class="text-lg font-semibold">{{ formatDate(activeLoan.created_at) }}</div>
+            </div>
+            <div class="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
+              <div class="text-sm text-gray-500 dark:text-gray-400">Repayment Due</div>
+              <div class="text-lg font-semibold">{{ formatRepaymentDate(activeLoan.created_at, activeLoan.repayment_period) }}</div>
+            </div>
+            <div class="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
               <div class="text-sm text-gray-500 dark:text-gray-400">Status</div>
               <div class="text-lg font-semibold" :class="getLoanStatusClass(activeLoan.status)">{{ activeLoan.status }}</div>
             </div>
@@ -174,6 +182,7 @@
               <div>
                 <div class="font-semibold">Loan #{{ loan.id.toString().padStart(3, '0') }} - {{ formatDate(loan.created_at) }}</div>
                 <div class="text-sm text-gray-600">RWF {{ parseFloat(loan.amount).toLocaleString() }} - {{ loan.repayment_period }} months</div>
+                <div class="text-xs text-gray-500">Taken: {{ formatDate(loan.created_at) }} · Due: {{ formatRepaymentDate(loan.created_at, loan.repayment_period) }}</div>
               </div>
               <div class="text-right">
                 <div class="font-semibold" :class="getLoanStatusClass(loan.status)">{{ getLoanStatusLabel(loan.status) }}</div>
@@ -787,6 +796,13 @@ const calculateRemainingBalance = (loan) => {
   const remainingBalance = totalAmountDue - parseFloat(totalPaid)
   
   return Math.max(0, Math.round(remainingBalance))
+}
+
+const formatRepaymentDate = (dateTaken, months) => {
+  if (!dateTaken || !months) return 'N/A'
+  const d = new Date(dateTaken)
+  d.setMonth(d.getMonth() + parseInt(months))
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 const formatDate = (dateString) => {

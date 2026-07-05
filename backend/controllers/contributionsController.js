@@ -773,11 +773,20 @@ class ContributionsController {
         // Validate amount
         const finalAmount = amount !== undefined ? parseFloat(amount) : 0.00;
         if (isNaN(parseFloat(finalAmount)) || parseFloat(finalAmount) < 0) {
-          console.log(`[Contributions] Skipping invalid amount: ${amount} (userId: ${userId})`);
-          continue; // Skip invalid amounts
+          continue;
         }
 
-        console.log(`[Contributions] Recording amount: ${finalAmount} (Type: ${typeof amount}) for userId: ${userId}`);
+        // Get member shares to calculate expected amount
+        const [memberInfo] = await this.db.execute(
+          'SELECT shares FROM tontine_members WHERE user_id = ? AND tontine_id = ? AND status = ?',
+          [userId, tontineId, 'approved']
+        );
+        const shares = memberInfo.length > 0 ? (memberInfo[0].shares || 1) : 1;
+        const expectedAmount = parseFloat(tontine.contribution_amount) * shares;
+
+        // Split: this month gets expected amount, surplus goes to next month
+        const thisMonthAmount = Math.min(finalAmount, expectedAmount);
+        const surplus = parseFloat((finalAmount - thisMonthAmount).toFixed(2));
 
         // Check if contribution record already exists for this user, tontine, and date
         const [existing] = await this.db.execute(
@@ -786,50 +795,71 @@ class ContributionsController {
         );
 
         if (existing.length > 0) {
-          // Update existing record
           await this.db.execute(
-            `UPDATE contributions 
-             SET amount = ?, payment_status = ?, payment_method = 'manual' 
-             WHERE id = ?`,
-            [finalAmount, status, existing[0].id]
+            `UPDATE contributions SET amount = ?, payment_status = ?, payment_method = 'manual' WHERE id = ?`,
+            [thisMonthAmount, status, existing[0].id]
           );
         } else {
-          // Generate unique transaction reference
           const randomSuffix = Math.floor(1000 + Math.random() * 9000);
           const transactionRef = `CONTR-${Date.now()}-${userId}-${tontineId}-${randomSuffix}`;
-
-          // Insert new record
           await this.db.execute(
-            `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) 
-             VALUES (?, ?, ?, 'manual', ?, ?, ?, ?)`,
-            [userId, tontineId, finalAmount, contributionDate, transactionRef, status, getCurrentUTCDate()]
+            `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, ?, ?)`,
+            [userId, tontineId, thisMonthAmount, contributionDate, transactionRef, status, getCurrentUTCDate()]
           );
         }
 
-        // Create payment record in payments table for any status
+        // Payment record for this month
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const transactionRef = `CONTRIB-PAY-ADMIN-${Date.now()}-${userId}-${existing.length > 0 ? existing[0].id : 'new'}-${randomSuffix}`;
-        
-        // Map contribution status to payment status
         let paymentStatus = 'pending';
         if (status === 'Approved') paymentStatus = 'completed';
         else if (status === 'Rejected') paymentStatus = 'cancelled';
         else if (status === 'Failed') paymentStatus = 'failed';
 
         await this.db.execute(
-          `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, tontineId, 'contribution', finalAmount, 'manual', JSON.stringify({ notes: notes || '', contributionId: existing.length > 0 ? existing[0].id : null }), paymentStatus, transactionRef, getCurrentUTCDate()]
+          `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [userId, tontineId, 'contribution', thisMonthAmount, 'manual', JSON.stringify({ notes: notes || '', contributionId: existing.length > 0 ? existing[0].id : null }), paymentStatus, transactionRef, getCurrentUTCDate()]
         );
 
-        // Create in-app notification for the member
-        const notificationTitle = 'Contribution Recorded';
-        const notificationMessage = `An administrator has recorded a contribution of RWF ${finalAmount.toLocaleString()} for you on ${contributionDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
-        
+        // Route surplus to next month's contribution
+        if (surplus > 0) {
+          const nextMonthDate = new Date(contributionDate);
+          nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
+          const nextMonthStr = nextMonthDate.toISOString().split('T')[0];
+
+          const [existingNext] = await this.db.execute(
+            'SELECT * FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
+            [userId, tontineId, nextMonthStr]
+          );
+
+          if (existingNext.length > 0) {
+            await this.db.execute(
+              `UPDATE contributions SET amount = amount + ?, payment_status = 'Approved', payment_method = 'manual' WHERE id = ?`,
+              [surplus, existingNext[0].id]
+            );
+          } else {
+            const nextRef = `CONTR-NEXT-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+            await this.db.execute(
+              `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, 'Approved', ?)`,
+              [userId, tontineId, surplus, nextMonthStr, nextRef, getCurrentUTCDate()]
+            );
+          }
+
+          const nextPayRef = `CONTRIB-PAY-NEXT-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+          await this.db.execute(
+            `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, 'contribution', ?, 'manual', ?, 'completed', ?, ?)`,
+            [userId, tontineId, surplus, JSON.stringify({ notes: `Advance contribution for ${nextMonthStr}`, advanceMonth: nextMonthStr }), nextPayRef, getCurrentUTCDate()]
+          );
+        }
+
+        // Notification
+        const notificationMessage = surplus > 0
+          ? `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded for ${contributionDate}. RWF ${surplus.toLocaleString()} applied as next month's contribution (${new Date(contributionDate.replace(/-/g, '/')).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).replace(/\w+$/, '') + new Date(new Date(contributionDate).setMonth(new Date(contributionDate).getMonth() + 1)).toLocaleString('en-US', { month: 'long', year: 'numeric' })}).`
+          : `An administrator has recorded a contribution of RWF ${thisMonthAmount.toLocaleString()} for you on ${contributionDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
+
         await this.db.execute(
-          `INSERT INTO notifications (user_id, title, message, type, created_at) 
-           VALUES (?, ?, ?, 'contribution', ?)`,
-          [userId, notificationTitle, notificationMessage, getCurrentUTCDate()]
+          `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'contribution', ?)`,
+          [userId, 'Contribution Recorded', notificationMessage, getCurrentUTCDate()]
         );
 
         // Send email for ALL statuses
@@ -851,9 +881,9 @@ class ContributionsController {
 
           const emailTemplate = getContributionStatusUpdatedTemplate({
             contributionId: existing.length > 0 ? existing[0].id : null,
-            amount: finalAmount,
+            amount: thisMonthAmount,
             date: contributionDate,
-            notes: notes || ''
+            notes: surplus > 0 ? `${notes || ''} (RWF ${surplus.toLocaleString()} applied as next month advance)` : (notes || '')
           }, userName, status, tontines[0].name);
 
           sendEmail(userEmail, 'Contribution Status Updated - The Future', emailTemplate)

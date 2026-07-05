@@ -376,6 +376,11 @@ class PaymentsController {
         return ResponseHelpers.sendValidationResponse(res, 'Tontine is not active');
       }
 
+      // Prevent overpayment on contribution
+      if (finalAmount > parseFloat(tontine[0].contribution_amount) + 0.01) {
+        return ResponseHelpers.sendValidationResponse(res, `Payment amount (${finalAmount}) exceeds required contribution amount (${tontine[0].contribution_amount})`);
+      }
+
       let retryContributionId = null;
       const [existingContributions] = await this.db.execute(
         `SELECT id, payment_status, transaction_ref
@@ -543,6 +548,17 @@ class PaymentsController {
 
       if (loan.length === 0) {
         return ResponseHelpers.sendValidationResponse(res, 'Loan not found or not eligible for payment');
+      }
+
+      // Check remaining balance to prevent overpayment
+      const [paidResult] = await this.db.execute(
+        `SELECT COALESCE(SUM(amount), 0) as total_paid FROM payments WHERE loan_id = ? AND status IN ('completed', 'pending')`,
+        [finalLoanId]
+      );
+      const totalPaid = parseFloat(paidResult[0].total_paid);
+      const remaining = parseFloat(loan[0].total_amount) - totalPaid;
+      if (finalAmount > remaining + 0.01) {
+        return ResponseHelpers.sendValidationResponse(res, `Payment amount (${finalAmount}) exceeds remaining loan balance (${remaining.toFixed(2)})`);
       }
 
       // Process mobile money payment through HDEV
@@ -834,6 +850,11 @@ class PaymentsController {
         return ResponseHelpers.sendValidationResponse(res, 'Penalty not found or already paid');
       }
 
+      // Prevent overpayment on penalty
+      if (finalAmount > parseFloat(penalty[0].amount) + 0.01) {
+        return ResponseHelpers.sendValidationResponse(res, `Payment amount (${finalAmount}) exceeds penalty amount (${penalty[0].amount})`);
+      }
+
       // Process mobile money payment through HDEV
       if (finalPaymentMethod === 'mobile_money') {
         const { phone } = req.body;
@@ -1009,6 +1030,18 @@ class PaymentsController {
           continue; // Skip if loan not found
         }
 
+        // Split amount: loan gets remaining balance, surplus goes to contribution
+        const [paidResult] = await this.db.execute(
+          `SELECT COALESCE(SUM(amount), 0) as total_paid FROM payments WHERE loan_id = ? AND status IN ('completed', 'pending')`,
+          [loanId]
+        );
+        const totalPaid = parseFloat(paidResult[0].total_paid);
+        const remaining = Math.max(0, parseFloat(loan[0].total_amount) - totalPaid);
+        const loanPayAmount = Math.min(finalAmount, remaining);
+        const surplus = parseFloat((finalAmount - loanPayAmount).toFixed(2));
+
+        if (loanPayAmount <= 0) continue; // nothing left to pay on loan
+
         // Generate unique transaction reference
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const transactionRef = `LOAN-PAY-ADMIN-${Date.now()}-${userId}-${loanId}-${randomSuffix}`;
@@ -1025,20 +1058,53 @@ class PaymentsController {
             `UPDATE payments 
              SET amount = ?, status = ?, payment_method = 'manual', payment_data = ?, updated_at = ? 
              WHERE id = ?`,
-            [finalAmount, status, JSON.stringify({ notes: notes || '' }), getCurrentUTCDate(), existing[0].id]
+            [loanPayAmount, status, JSON.stringify({ notes: notes || '' }), getCurrentUTCDate(), existing[0].id]
           );
         } else {
           // Insert new record
           await this.db.execute(
             `INSERT INTO payments (user_id, tontine_id, loan_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, tontineId, loanId, 'loan_payment', finalAmount, 'manual', JSON.stringify({ notes: notes || '' }), status, transactionRef, getCurrentUTCDate()]
+            [userId, tontineId, loanId, 'loan_payment', loanPayAmount, 'manual', JSON.stringify({ notes: notes || '' }), status, transactionRef, getCurrentUTCDate()]
+          );
+        }
+
+        // If there is a surplus, record it as a contribution
+        if (surplus > 0) {
+          const contribRef = `CONTR-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const [existingContrib] = await this.db.execute(
+            'SELECT id FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
+            [userId, tontineId, paymentDate]
+          );
+          if (existingContrib.length > 0) {
+            await this.db.execute(
+              `UPDATE contributions SET amount = amount + ?, payment_status = 'Approved', payment_method = 'manual' WHERE id = ?`,
+              [surplus, existingContrib[0].id]
+            );
+          } else {
+            await this.db.execute(
+              `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, 'Approved', ?)`,
+              [userId, tontineId, surplus, paymentDate, contribRef, getCurrentUTCDate()]
+            );
+          }
+          // Payment record for the surplus contribution
+          const contribPayRef = `CONTRIB-PAY-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+          await this.db.execute(
+            `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, 'contribution', ?, 'manual', ?, 'completed', ?, ?)`,
+            [userId, tontineId, surplus, JSON.stringify({ notes: `Surplus from loan #${loanId} payment`, loanId }), contribPayRef, getCurrentUTCDate()]
+          );
+          // Notify user about surplus
+          await this.db.execute(
+            `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'payment', ?)`,
+            [userId, 'Surplus Applied to Contribution', `RWF ${surplus.toLocaleString()} surplus from your loan payment has been applied to your contribution.`, getCurrentUTCDate()]
           );
         }
 
         // Create in-app notification for the member
         const notificationTitle = 'Loan Payment Recorded';
-        const notificationMessage = `An administrator has recorded a loan payment of RWF ${finalAmount.toLocaleString()} for you on ${paymentDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
+        const notificationMessage = surplus > 0
+          ? `Loan payment of RWF ${loanPayAmount.toLocaleString()} recorded on ${paymentDate}. RWF ${surplus.toLocaleString()} surplus applied to your contribution.`
+          : `An administrator has recorded a loan payment of RWF ${loanPayAmount.toLocaleString()} for you on ${paymentDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
         
         await this.db.execute(
           `INSERT INTO notifications (user_id, title, message, type, created_at) 
@@ -1066,10 +1132,10 @@ class PaymentsController {
           // Send email notification
           const emailTemplate = getLoanPaymentRecordedTemplate({
             loanId: loanId,
-            amount: finalAmount,
+            amount: loanPayAmount,
             paymentDate: paymentDate,
             status: status,
-            notes: notes || ''
+            notes: surplus > 0 ? `${notes || ''} (RWF ${surplus.toLocaleString()} surplus applied to contribution)` : (notes || '')
           }, userName);
 
           sendEmail(userEmail, 'Loan Payment Recorded - The Future', emailTemplate)

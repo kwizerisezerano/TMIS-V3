@@ -547,10 +547,10 @@ class PenaltiesController {
 
       // Process each penalty payment
       for (const payment of payments) {
-        const { userId, penaltyId, status, notes } = payment;
+        const { userId, penaltyId, paidAmount, status, notes } = payment;
 
         if (!userId || isNaN(userId) || !penaltyId || isNaN(penaltyId)) {
-          continue; // Skip invalid user/penalty ids
+          continue;
         }
 
         // Check if penalty exists and belongs to user in this tontine
@@ -559,11 +559,16 @@ class PenaltiesController {
           [penaltyId, userId, tontineId]
         );
 
-        if (penalties.length === 0) {
-          continue; // Skip if penalty not found
-        }
+        if (penalties.length === 0) continue;
 
         const penalty = penalties[0];
+        if (penalty.status === 'paid') continue;
+
+        // Split: penalty gets its amount, surplus goes to contribution
+        const enteredAmount = paidAmount ? parseFloat(paidAmount) : parseFloat(penalty.amount);
+        const penaltyAmount = parseFloat(penalty.amount);
+        const penaltyPayAmount = Math.min(enteredAmount, penaltyAmount);
+        const surplus = parseFloat((enteredAmount - penaltyPayAmount).toFixed(2));
 
         // Update penalty status
         await this.db.execute(
@@ -571,11 +576,9 @@ class PenaltiesController {
           [status, status === 'paid' ? getCurrentUTCDate() : null, penaltyId]
         );
 
-        // Create payment record in payments table for any status
+        // Create payment record
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const transactionRef = `PENALTY-PAY-ADMIN-${Date.now()}-${userId}-${penaltyId}-${randomSuffix}`;
-        
-        // Map penalty status to payment status
         let paymentStatus = 'pending';
         if (status === 'paid') paymentStatus = 'completed';
         else if (status === 'waived') paymentStatus = 'cancelled';
@@ -583,25 +586,46 @@ class PenaltiesController {
         await this.db.execute(
           `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, tontineId, 'penalty', penalty.amount, 'manual', JSON.stringify({ notes: notes || '', penaltyId: penaltyId, reason: penalty.reason }), paymentStatus, transactionRef, getCurrentUTCDate()]
+          [userId, tontineId, 'penalty', penaltyPayAmount, 'manual', JSON.stringify({ notes: notes || '', penaltyId, reason: penalty.reason }), paymentStatus, transactionRef, getCurrentUTCDate()]
         );
 
-        // Create in-app notification for ALL statuses
-        const notificationTitle = 'Penalty Status Updated';
-        const notificationMessage = `An administrator has updated your penalty status to ${status} on ${paymentDate}.${notes ? ' Notes: ' + notes : ''}`;
-        
+        // Route surplus to contribution
+        if (surplus > 0) {
+          const contribRef = `CONTR-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const [existingContrib] = await this.db.execute(
+            'SELECT id FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
+            [userId, tontineId, paymentDate]
+          );
+          if (existingContrib.length > 0) {
+            await this.db.execute(
+              `UPDATE contributions SET amount = amount + ?, payment_status = 'Approved', payment_method = 'manual' WHERE id = ?`,
+              [surplus, existingContrib[0].id]
+            );
+          } else {
+            await this.db.execute(
+              `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, 'Approved', ?)`,
+              [userId, tontineId, surplus, paymentDate, contribRef, getCurrentUTCDate()]
+            );
+          }
+          const contribPayRef = `CONTRIB-PAY-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+          await this.db.execute(
+            `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, 'contribution', ?, 'manual', ?, 'completed', ?, ?)`,
+            [userId, tontineId, surplus, JSON.stringify({ notes: `Surplus from penalty #${penaltyId} payment`, penaltyId }), contribPayRef, getCurrentUTCDate()]
+          );
+        }
+
+        // Notification
+        const notificationMessage = surplus > 0
+          ? `Penalty #${penaltyId} marked as ${status}. RWF ${surplus.toLocaleString()} surplus applied to your contribution.`
+          : `An administrator has updated your penalty status to ${status} on ${paymentDate}.${notes ? ' Notes: ' + notes : ''}`;
+
         await this.db.execute(
-          `INSERT INTO notifications (user_id, title, message, type, created_at) 
-           VALUES (?, ?, ?, 'penalty', ?)`,
-          [userId, notificationTitle, notificationMessage, getCurrentUTCDate()]
+          `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'penalty', ?)`,
+          [userId, 'Penalty Status Updated', notificationMessage, getCurrentUTCDate()]
         );
 
-        // Send email for ALL statuses
-        const [users] = await this.db.execute(
-          'SELECT names, email FROM users WHERE id = ?',
-          [userId]
-        );
-
+        // Send email
+        const [users] = await this.db.execute('SELECT names, email FROM users WHERE id = ?', [userId]);
         if (users.length > 0) {
           let userName = users[0].names;
           let userEmail = users[0].email;
@@ -609,20 +633,18 @@ class PenaltiesController {
             const decryptedUser = decryptUserData({ names: userName, email: userEmail });
             userName = decryptedUser.names;
             userEmail = decryptedUser.email;
-          } catch (e) {
-            // If decryption fails, use original values
-          }
+          } catch (e) {}
 
           const emailTemplate = getPenaltyStatusUpdatedTemplate({
-            penaltyId: penaltyId,
-            amount: penalty.amount,
+            penaltyId,
+            amount: penaltyPayAmount,
             reason: penalty.reason,
-            notes: notes || ''
+            notes: surplus > 0 ? `${notes || ''} (RWF ${surplus.toLocaleString()} surplus applied to contribution)` : (notes || '')
           }, userName, status);
 
           sendEmail(userEmail, 'Penalty Status Updated - The Future', emailTemplate)
-            .then(() => console.log(`Penalty status email sent to ${userEmail} (user ID: ${userId})`))
-            .catch(err => console.error(`Failed to send penalty status email to ${userEmail} (user ID: ${userId}):`, err));
+            .then(() => console.log(`Penalty email sent to ${userEmail}`))
+            .catch(err => console.error(`Failed to send penalty email:`, err));
         }
       }
 

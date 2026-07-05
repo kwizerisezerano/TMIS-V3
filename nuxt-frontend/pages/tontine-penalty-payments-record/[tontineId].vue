@@ -57,6 +57,7 @@
               <tr>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Member & Penalty Details</th>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payment Amount</th>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Notes / Comments</th>
               </tr>
             </thead>
@@ -91,6 +92,23 @@
                       <option value="waived">Waived</option>
                     </select>
                   </div>
+                </td>
+
+                <!-- Payment Amount -->
+                <td class="px-6 py-4">
+                  <div class="relative flex items-center min-w-[180px]">
+                    <input
+                      type="text"
+                      inputmode="decimal"
+                      :value="record.paidAmount"
+                      :placeholder="parseFloat(record.amount).toLocaleString()"
+                      class="w-full px-4 py-3 pr-14 border-2 border-red-300 dark:border-red-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-white text-base font-semibold text-gray-900"
+                      @input="record.paidAmount = $event.target.value"
+                      @keypress="(e) => { const c = e.which || e.keyCode; if (c !== 46 && c > 31 && (c < 48 || c > 57)) e.preventDefault(); if (c === 46 && e.target.value.includes('.')) e.preventDefault() }"
+                    />
+                    <span class="absolute right-3 text-gray-400 text-sm font-medium pointer-events-none">RWF</span>
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Penalty: RWF {{ parseFloat(record.amount).toLocaleString() }}</div>
                 </td>
 
                 <!-- Notes -->
@@ -210,6 +228,7 @@ const fetchData = async () => {
         names: penalty.user_name,
         email: '',
         amount: penalty.amount,
+        paidAmount: '',
         reason: penalty.reason,
         status: penalty.status,
         notes: ''
@@ -233,6 +252,7 @@ const savePenaltyPayments = async () => {
       payments: records.value.map(r => ({
         userId: r.userId,
         penaltyId: r.penaltyId,
+        paidAmount: r.paidAmount,
         status: r.status,
         notes: r.notes || ''
       }))

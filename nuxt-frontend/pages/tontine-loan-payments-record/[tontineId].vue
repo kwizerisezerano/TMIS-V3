@@ -57,6 +57,8 @@
             <thead class="bg-gray-50 dark:bg-gray-700/50">
               <tr>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Member & Loan Details</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date Taken</th>
+                <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Repayment Due</th>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Payment Amount</th>
                 <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">Notes / Comments</th>
@@ -80,6 +82,17 @@
                     </div>
                   </div>
                 </td>
+
+                <!-- Date Taken -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900 dark:text-white">{{ formatDate(record.date_taken) }}</div>
+                </td>
+
+                <!-- Repayment Due Date -->
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900 dark:text-white">{{ formatRepaymentDate(record.date_taken, record.repayment_period) }}</div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400">{{ record.repayment_period }} month(s)</div>
+                </td>
                 
                 <!-- Status -->
                 <td class="px-6 py-4 whitespace-nowrap">
@@ -97,12 +110,19 @@
                 </td>
 
                 <!-- Amount -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <CurrencyInput 
-                    v-model="record.amount" 
-                    :max="calculateRemainingBalance(record)"
-                    placeholder="0"
-                  />
+                <td class="px-6 py-4">
+                  <div class="relative flex items-center min-w-[180px]">
+                    <input
+                      type="text"
+                      inputmode="decimal"
+                      :value="record.amount"
+                      placeholder="0"
+                      class="w-full px-4 py-3 pr-14 border-2 border-orange-300 dark:border-orange-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-white text-base font-semibold text-gray-900"
+                      @input="record.amount = $event.target.value"
+                      @keypress="(e) => { const c = e.which || e.keyCode; if (c !== 46 && c > 31 && (c < 48 || c > 57)) e.preventDefault(); if (c === 46 && e.target.value.includes('.')) e.preventDefault() }"
+                    />
+                    <span class="absolute right-3 text-gray-400 text-sm font-medium pointer-events-none">RWF</span>
+                  </div>
                 </td>
 
                 <!-- Notes -->
@@ -110,7 +130,7 @@
                   <input 
                     v-model="record.notes" 
                     type="text" 
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    class="w-full min-w-[200px] px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
                     placeholder="Enter manual payment details..."
                   />
                 </td>
@@ -181,6 +201,18 @@ const calculateRemainingBalance = (record) => {
   return Math.max(0, Math.round(totalAmount - totalPaid))
 }
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+const formatRepaymentDate = (dateTaken, months) => {
+  if (!dateTaken || !months) return 'N/A'
+  const d = new Date(dateTaken)
+  d.setMonth(d.getMonth() + parseInt(months))
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 const fetchData = async () => {
   loading.value = true
   const { api } = useApi()
@@ -245,7 +277,7 @@ const fetchLoanPaymentsForDate = async () => {
     }
     console.log('All existing payments:', existingPayments)
 
-    // Map loans to payment records
+    // Map loans to payment records, excluding fully paid loans
     records.value = loans.value.map(loan => {
       const existing = existingPayments.find(p => 
         p.loan_id === loan.id && new Date(p.created_at).toISOString().split('T')[0] === paymentDate.value
@@ -267,11 +299,13 @@ const fetchLoanPaymentsForDate = async () => {
         email: '',
         total_amount: loan.total_amount,
         total_paid: totalPaid,
+        date_taken: loan.created_at,
+        repayment_period: loan.repayment_period,
         status: existing ? existing.status : 'pending',
-        amount: existing ? parseFloat(existing.amount) : 0,
+        amount: existing ? String(parseFloat(existing.amount)) : '',
         notes: existing?.payment_data?.notes || ''
       }
-    })
+    }).filter(r => (parseFloat(r.total_amount) - r.total_paid) > 0)
   } catch (error) {
     console.error('Error fetching loan payments for date:', error)
     toast.add({ title: 'Warning', description: 'Could not fetch existing loan payment logs for this date', color: 'yellow' })
@@ -284,10 +318,10 @@ const saveLoanPayments = async () => {
   try {
     const payload = {
       paymentDate: paymentDate.value,
-      payments: records.value.filter(r => r.amount > 0).map(r => ({
+      payments: records.value.filter(r => parseFloat(r.amount) > 0).map(r => ({
         userId: r.userId,
         loanId: r.loanId,
-        amount: r.amount,
+        amount: parseFloat(r.amount),
         status: r.status,
         notes: r.notes || ''
       }))
