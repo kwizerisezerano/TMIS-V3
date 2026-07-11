@@ -29,6 +29,9 @@
             <Icon v-if="item?.icon" :name="item.icon" class="w-5 h-5 mr-3 flex-shrink-0" />
             <span v-else class="w-5 h-5 mr-3"></span>
             {{ item?.name || '' }}
+            <span v-if="item.href === '/notifications' && unreadCount > 0" class="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center leading-none">
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
+            </span>
           </NuxtLink>
         </nav>
         <div v-else class="flex-1 px-4 py-4 space-y-1">
@@ -85,23 +88,36 @@
                     {{ unreadCount > 9 ? '9+' : unreadCount }}
                   </span>
                 </button>
-                <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 max-h-96 overflow-y-auto z-50">
-                  <div class="p-3 border-b border-gray-100 dark:border-gray-700 font-semibold text-sm text-gray-900 dark:text-white">Notifications</div>
-                  <div v-if="notifications.length === 0" class="p-4 text-center text-sm text-gray-500 dark:text-gray-400">No notifications</div>
-                  <div v-else>
-                    <div v-for="notification in notifications" :key="notification.id"
-                         class="p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                         :class="{ 'bg-emerald-50 dark:bg-emerald-900/20': !notification.is_read }"
-                         @click="markAsRead(notification.id)">
-                      <div class="flex items-start gap-3">
-                        <div class="w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0" :class="notification.is_read ? 'bg-gray-300 dark:bg-gray-500' : 'bg-emerald-500 animate-pulse'"></div>
-                        <div class="flex-1 min-w-0">
-                          <p class="font-semibold text-sm text-gray-900 dark:text-white">{{ notification.title }}</p>
-                          <p class="text-sm text-gray-600 dark:text-gray-300 mt-0.5">{{ notification.message }}</p>
-                          <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(notification.created_at) }}</p>
+                <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-600 z-50">
+                  <!-- Header -->
+                  <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                    <span class="font-semibold text-sm text-gray-900 dark:text-white">Unread ({{ unreadNotifications.length }})</span>
+                  </div>
+                  <!-- Unread list -->
+                  <div class="max-h-72 overflow-y-auto">
+                    <div v-if="unreadNotifications.length === 0" class="p-4 text-center text-sm text-gray-500 dark:text-gray-400">No unread notifications</div>
+                    <div v-else>
+                      <div v-for="notification in unreadNotifications" :key="notification.id"
+                           class="p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer transition-colors bg-emerald-50/50 dark:bg-emerald-900/10"
+                           @click="markAsRead(notification.id)">
+                        <div class="flex items-start gap-3">
+                          <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 bg-emerald-500"></div>
+                          <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-sm text-gray-900 dark:text-white">{{ notification.title }}</p>
+                            <p class="text-xs text-gray-600 dark:text-gray-300 mt-0.5 line-clamp-2">{{ notification.message }}</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ formatDate(notification.created_at) }}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
+                  </div>
+                  <!-- Footer: View All -->
+                  <div class="border-t border-gray-100 dark:border-gray-700">
+                    <NuxtLink to="/notifications" @click="showNotifications = false"
+                      class="flex items-center justify-center gap-1 py-3 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-b-xl">
+                      View all notifications
+                      <Icon name="i-heroicons-arrow-right" class="w-4 h-4" />
+                    </NuxtLink>
                   </div>
                 </div>
               </div>
@@ -169,12 +185,12 @@ const showNotifications = ref(false)
 const showLogoutConfirm = ref(false)
 const { user } = useAuth()
 const notifications = ref([])
-const unreadCount = ref(0)
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 const notificationsContainer = ref(null)
 
-let notificationInterval = null
+const unreadNotifications = computed(() => notifications.value.filter(n => !n.is_read))
+const unreadCount = computed(() => unreadNotifications.value.length)
 
 onMounted(async () => {
   if (!process.client) return
@@ -221,9 +237,9 @@ const fetchNotifications = async () => {
     const userId = user.value?.id
     if (!userId) return
     const result = await api('/v1/notifications/', { params: { userId } })
-    const data = result.data || result
-    notifications.value = data
-    unreadCount.value = Array.isArray(data) ? data.filter(n => !n.is_read).length : 0
+    const raw = result.data || result
+    const data = Array.isArray(raw) ? raw : []
+    notifications.value = data.map(n => ({ ...n, is_read: !!(n.is_read ?? n.read) }))
   } catch (error) {
     console.error('Failed to fetch notifications:', error)
   }
@@ -236,7 +252,6 @@ const markAsRead = async (notificationId) => {
     const notification = notifications.value.find(n => n.id === notificationId)
     if (notification && !notification.is_read) {
       notification.is_read = true
-      unreadCount.value--
     }
   } catch (error) {
     console.error('Failed to mark notification as read:', error)
@@ -271,7 +286,8 @@ const navigation = computed(() => {
     { name: 'Reports', href: '/reports', icon: 'i-heroicons-chart-bar' },
     { name: 'Meetings', href: '/meetings', icon: 'i-heroicons-users' },
     { name: 'Penalties', href: '/penalties', icon: 'i-heroicons-scale' },
-    { name: 'My Surplus', href: '/surplus', icon: 'i-heroicons-gift' }
+    { name: 'My Surplus', href: '/surplus', icon: 'i-heroicons-gift' },
+    { name: 'Notifications', href: '/notifications', icon: 'i-heroicons-bell' }
   ]
   if (!user.value) return baseNavigation.filter(item => item.name !== 'Reports')
   return baseNavigation
