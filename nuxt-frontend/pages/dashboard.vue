@@ -35,55 +35,100 @@
           </div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <!-- Summary Cards -->
+        <!-- Row 1: 3 main financial cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div class="bg-gradient-to-br from-green-600 to-emerald-700 dark:from-green-700 dark:to-emerald-800 rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-shadow">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-green-50 text-sm font-medium">Total Savings</p>
                 <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalContributions) }}</p>
+                <p class="text-xs text-green-200 mt-1">{{ userTontines.length }} active tontine(s)</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-banknotes" class="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
-          
-          <div class="bg-gradient-to-br from-emerald-600 to-teal-700 dark:from-emerald-700 dark:to-teal-800 rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-shadow">
+
+          <div class="bg-gradient-to-br from-amber-500 to-orange-600 dark:from-amber-600 dark:to-orange-700 rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-shadow">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-emerald-50 text-sm font-medium">Active Tontines</p>
-                <p class="text-2xl font-bold mt-1">{{ userTontines.length }}</p>
-              </div>
-              <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
-                <Icon name="i-heroicons-building-library" class="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-          
-          <div class="bg-gradient-to-br from-emerald-700 to-green-800 dark:from-emerald-800 dark:to-green-900 rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-shadow">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-emerald-50 text-sm font-medium">Outstanding Loans</p>
+                <p class="text-amber-50 text-sm font-medium">Outstanding Loans</p>
                 <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(stats.totalLoans) }}</p>
+                <p class="text-xs text-amber-200 mt-1">{{ stats.totalLoanRequested > 0 ? ((stats.totalLoanPaid / stats.totalLoanRequested) * 100).toFixed(0) : 0 }}% repaid</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-credit-card" class="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
-          
+
           <div class="bg-gradient-to-br from-teal-600 to-cyan-700 dark:from-teal-700 dark:to-cyan-800 rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-shadow">
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-teal-50 text-sm font-medium">Net Worth</p>
-                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(Math.max(0, (stats.totalContributions - stats.totalLoans - stats.penalties.pending))) }}</p>
+                <p class="text-2xl font-bold mt-1">{{ formatDashboardAmount(Math.max(0, stats.totalContributions - stats.totalLoans - stats.penalties.pending)) }}</p>
+                <p class="text-xs text-teal-200 mt-1">Savings minus loans &amp; penalties</p>
               </div>
               <div class="w-12 h-12 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-inner">
                 <Icon name="i-heroicons-chart-pie" class="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Row 2: 3 detail cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Penalties</span>
+              <Icon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-500" />
+            </div>
+            <p class="text-xl font-bold text-red-600 dark:text-red-400">{{ formatDashboardAmount(stats.penalties.pending) }}</p>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2">
+              <div class="bg-red-500 h-1.5 rounded-full transition-all" :style="{ width: Math.min((stats.penalties.pending / Math.max(stats.totalContributions, 1)) * 100, 100) + '%' }"></div>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Paid Penalties</span>
+              <Icon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
+            </div>
+            <p class="text-xl font-bold text-green-600 dark:text-green-400">{{ formatDashboardAmount(stats.penalties.paid) }}</p>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-2">
+              <div class="bg-green-500 h-1.5 rounded-full transition-all" :style="{ width: Math.min((stats.penalties.paid / Math.max(stats.totalContributions, 1)) * 100, 100) + '%' }"></div>
+            </div>
+          </div>
+
+          <NuxtLink to="/surplus" class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-md border border-gray-100 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 transition-colors block">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Overpayments</span>
+              <Icon name="i-heroicons-gift" class="w-5 h-5 text-purple-500" />
+            </div>
+            <p class="text-xl font-bold text-purple-600 dark:text-purple-400">{{ formatDashboardAmount(stats.surplus.total) }}</p>
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-xs text-gray-500 dark:text-gray-400">
+                <span v-if="stats.surplus.pending > 0" class="text-amber-600 dark:text-amber-400 font-medium">{{ formatDashboardAmount(stats.surplus.pending) }} unallocated</span>
+                <span v-else class="text-green-600 dark:text-green-400">All allocated ✓</span>
+              </span>
+              <span class="text-xs text-purple-500 dark:text-purple-400">View →</span>
+            </div>
+          </NuxtLink>
+        </div>
+
+        <!-- Pending surplus alert banner -->
+        <div v-if="stats.surplus.pending > 0" class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-xl flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <Icon name="i-heroicons-gift" class="w-5 h-5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+            <div>
+              <p class="font-semibold text-purple-800 dark:text-purple-200 text-sm">You have {{ formatDashboardAmount(stats.surplus.pending) }} in unallocated overpayments</p>
+              <p class="text-xs text-purple-600 dark:text-purple-400">Allocate your surplus so the accountant can apply it to your contributions, loans, or penalties.</p>
+            </div>
+          </div>
+          <NuxtLink to="/surplus">
+            <UButton color="purple" size="sm">Allocate Now</UButton>
+          </NuxtLink>
         </div>
 
         <!-- All Charts on Same Line -->
@@ -114,48 +159,6 @@
               <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-3">Financial Overview</h3>
               <div class="h-60">
                 <canvas ref="comprehensiveChartCanvas"></canvas>
-              </div>
-            </div>
-          </UCard>
-        </div>
-
-        <!-- Penalties Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <UCard class="border-0 shadow-lg bg-white dark:bg-gray-800">
-            <div class="p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600 dark:text-white/70">Pending Penalties</span>
-                <Icon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-500" />
-              </div>
-              <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ formatDashboardAmount(stats.penalties.pending) }}</p>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                <div class="bg-red-500 h-2 rounded-full" :style="{ width: Math.min((stats.penalties.pending / Math.max(stats.totalContributions, 1)) * 100, 100) + '%' }"></div>
-              </div>
-            </div>
-          </UCard>
-
-          <UCard class="border-0 shadow-lg bg-white dark:bg-gray-800">
-            <div class="p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600 dark:text-white/70">Paid Penalties</span>
-                <Icon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
-              </div>
-              <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ formatDashboardAmount(stats.penalties.paid) }}</p>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                <div class="bg-green-500 h-2 rounded-full" :style="{ width: Math.min((stats.penalties.paid / Math.max(stats.totalContributions, 1)) * 100, 100) + '%' }"></div>
-              </div>
-            </div>
-          </UCard>
-
-          <UCard class="border-0 shadow-lg bg-white dark:bg-gray-800">
-            <div class="p-4">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-600 dark:text-white/70">Loan Repayment</span>
-                <Icon name="i-heroicons-arrow-path" class="w-5 h-5 text-blue-500" />
-              </div>
-              <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ stats.totalLoanRequested > 0 ? ((stats.totalLoanPaid / stats.totalLoanRequested) * 100).toFixed(1) : 0 }}%</p>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
-                <div class="bg-blue-500 h-2 rounded-full" :style="{ width: stats.totalLoanRequested > 0 ? ((stats.totalLoanPaid / stats.totalLoanRequested) * 100) + '%' : '0%' }"></div>
               </div>
             </div>
           </UCard>
@@ -241,11 +244,8 @@ const stats = ref({
   totalLoanPaid: 0,
   totalLoanRequested: 0,
   memberCount: 0,
-  penalties: {
-    pending: 0,
-    paid: 0,
-    total: 0
-  }
+  penalties: { pending: 0, paid: 0, total: 0 },
+  surplus: { pending: 0, allocated: 0, total: 0 }
 })
 const loading = ref(true)
 const user = ref(null)
@@ -332,46 +332,41 @@ onUnmounted(() => {
 const fetchDashboardData = async () => {
   const { api } = useApi()
   try {
-    // Fetch tontines
     const tontinesRes = await api('/v1/tontines', { params: { userId: user.value.id, limit: 100 } })
     userTontines.value = extractArrayData(tontinesRes)
     stats.value.activeTontines = userTontines.value.length
-    
-    // Fetch contributions
-    const contribRes = await api('/v1/contributions', { params: { userId: user.value.id, includeStats: 'true', limit: 10000 } })
-    console.log('=== Contribution API Response ===', contribRes)
-    let contribData = extractObjectData(contribRes)
-    allContributions.value = Array.isArray(contribData) 
-      ? contribData 
-      : (contribData.contributions || (contribData.data?.contributions) || extractArrayData(contribRes))
-    console.log('Fetched contributions:', allContributions.value.length)
-    console.log('All contributions data:', JSON.stringify(allContributions.value, null, 2))
 
-    // Fetch loans
+    const contribRes = await api('/v1/contributions', { params: { userId: user.value.id, includeStats: 'true', limit: 10000 } })
+    let contribData = extractObjectData(contribRes)
+    allContributions.value = Array.isArray(contribData)
+      ? contribData
+      : (contribData.contributions || contribData.data?.contributions || extractArrayData(contribRes))
+
     const loansRes = await api('/v1/loans', { params: { userId: user.value.id, includeStats: 'true', limit: 10000 } })
     let loansData = extractObjectData(loansRes)
-    allLoans.value = Array.isArray(loansData) 
-      ? loansData 
-      : (loansData.loans || (loansData.data?.loans) || extractArrayData(loansRes))
-    console.log('Fetched loans:', allLoans.value.length)
+    allLoans.value = Array.isArray(loansData)
+      ? loansData
+      : (loansData.loans || loansData.data?.loans || extractArrayData(loansRes))
 
-    // Fetch payments
     const paymentsRes = await api('/v1/payments', { params: { userId: user.value.id, limit: 10000 } })
     allPayments.value = extractArrayData(paymentsRes)
-    console.log('Fetched payments:', allPayments.value.length)
-    
-    // Fetch penalties
+
     try {
       const penaltiesRes = await api(`/v1/penalties/user/${user.value.id}`)
       allPenalties.value = extractArrayData(penaltiesRes)
-      console.log('Fetched penalties:', allPenalties.value.length)
-    } catch (e) {
-      allPenalties.value = []
-    }
-    
+    } catch { allPenalties.value = [] }
+
+    try {
+      const surplusRes = await api('/v1/surplus/my')
+      const surplusList = extractArrayData(surplusRes)
+      stats.value.surplus.pending = surplusList.filter(s => s.status === 'pending').reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
+      stats.value.surplus.allocated = surplusList.filter(s => s.status === 'allocated').reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
+      stats.value.surplus.total = stats.value.surplus.pending + stats.value.surplus.allocated
+    } catch { stats.value.surplus = { pending: 0, allocated: 0, total: 0 } }
+
     applyFilters()
   } catch (error) {
-    console.error('Failed to fetch data:', error)
+    console.error('Failed to fetch dashboard data:', error)
   } finally {
     loading.value = false
   }
@@ -395,168 +390,77 @@ const extractObjectData = (response) => {
 }
 
 const applyFilters = () => {
-  console.log('=== Applying Filters ===')
-  console.log('Selected:', { selectedMonth: selectedMonth.value, selectedYear: selectedYear.value })
-  
-  // Filter contributions
   let filteredContribs = allContributions.value.filter(c => {
-    console.log('=== Checking contribution ===', c)
-    console.log('Payment status:', c.payment_status)
-    
     if (c.payment_status !== 'Approved') return false
-    
     const dateStr = c.contribution_date || c.created_at
-    console.log('Date string:', dateStr)
     if (!dateStr) return true
-    
     try {
       const d = new Date(dateStr)
-      console.log('Parsed date object:', d)
-      const contribYear = d.getFullYear()
-      const contribMonth = d.getMonth() + 1 // getMonth() is 0-based, convert to 1-12
-      
-      // Convert selected values to numbers for comparison
       const filterYear = selectedYear.value !== null ? Number(selectedYear.value) : null
       const filterMonth = selectedMonth.value !== null ? Number(selectedMonth.value) : null
-      
-      console.log('Checking contrib:', { 
-        amount: c.amount, 
-        dateStr, 
-        contribYear, 
-        contribMonth,
-        selectedYear,
-        selectedMonth,
-        filterYear,
-        filterMonth,
-        matchesYear: filterYear === null || contribYear === filterYear,
-        matchesMonth: filterMonth === null || contribMonth === filterMonth
-      })
-      
-      if (filterYear !== null && contribYear !== filterYear) {
-        return false
-      }
-      if (filterMonth !== null && contribMonth !== filterMonth) {
-        return false
-      }
+      if (filterYear !== null && d.getFullYear() !== filterYear) return false
+      if (filterMonth !== null && d.getMonth() + 1 !== filterMonth) return false
       return true
-    } catch (e) {
-      console.log('Date parse error:', dateStr, e)
-      return true
-    }
+    } catch { return true }
   })
-  
-  console.log('Filtered contributions count:', filteredContribs.length)
 
-  // Filter loans
   let filteredLoans = allLoans.value.filter(l => {
     const dateStr = l.created_at
     if (!dateStr) return true
-    
     try {
       const d = new Date(dateStr)
-      const loanYear = d.getFullYear()
-      const loanMonth = d.getMonth() + 1
-      
-      // Convert selected values to numbers for comparison
       const filterYear = selectedYear.value !== null ? Number(selectedYear.value) : null
       const filterMonth = selectedMonth.value !== null ? Number(selectedMonth.value) : null
-      
-      if (filterYear !== null && loanYear !== filterYear) return false
-      if (filterMonth !== null && loanMonth !== filterMonth) return false
-      
+      if (filterYear !== null && d.getFullYear() !== filterYear) return false
+      if (filterMonth !== null && d.getMonth() + 1 !== filterMonth) return false
       const status = (l.status || '').toLowerCase()
       return ['approved', 'disbursed', 'waiting', 'received', 'repaid', 'completed'].includes(status)
-    } catch (e) {
-      return true
-    }
+    } catch { return true }
   })
-  
-  // Filter payments
+
   let filteredPayments = allPayments.value.filter(p => {
     const dateStr = p.created_at || p.payment_date
     if (!dateStr) return true
-    
     try {
       const d = new Date(dateStr)
-      const paymentYear = d.getFullYear()
-      const paymentMonth = d.getMonth() + 1
-      
-      // Convert selected values to numbers for comparison
       const filterYear = selectedYear.value !== null ? Number(selectedYear.value) : null
       const filterMonth = selectedMonth.value !== null ? Number(selectedMonth.value) : null
-      
-      if (filterYear !== null && paymentYear !== filterYear) return false
-      if (filterMonth !== null && paymentMonth !== filterMonth) return false
-      
+      if (filterYear !== null && d.getFullYear() !== filterYear) return false
+      if (filterMonth !== null && d.getMonth() + 1 !== filterMonth) return false
       return p.payment_type === 'loan_payment'
-    } catch (e) {
-      return true
-    }
+    } catch { return true }
   })
-  
-  // Filter and calculate penalties
+
   const filterYear = selectedYear.value !== null ? Number(selectedYear.value) : null
   const filterMonth = selectedMonth.value !== null ? Number(selectedMonth.value) : null
-  
   let filteredPenalties = allPenalties.value.filter(p => {
     const dateStr = p.created_at || p.paid_at
     if (!dateStr) return true
-    
     try {
       const d = new Date(dateStr)
-      const penaltyYear = d.getFullYear()
-      const penaltyMonth = d.getMonth() + 1
-      
-      if (filterYear !== null && penaltyYear !== filterYear) return false
-      if (filterMonth !== null && penaltyMonth !== filterMonth) return false
-      
+      if (filterYear !== null && d.getFullYear() !== filterYear) return false
+      if (filterMonth !== null && d.getMonth() + 1 !== filterMonth) return false
       return true
-    } catch (e) {
-      return true
-    }
+    } catch { return true }
   })
-  
-  console.log('Fetched penalties:', allPenalties.value.length, 'Filtered penalties:', filteredPenalties.length)
-  console.log('All penalties data:', allPenalties.value)
-  
-  stats.value.penalties.pending = filteredPenalties
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-  
-  stats.value.penalties.paid = filteredPenalties
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-  
-  // Update stats
+
+  stats.value.penalties.pending = filteredPenalties.filter(p => p.status === 'pending').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
+  stats.value.penalties.paid = filteredPenalties.filter(p => p.status === 'paid').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
   stats.value.totalContributions = filteredContribs.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
   stats.value.totalLoanRequested = filteredLoans.reduce((sum, l) => sum + parseFloat(l.amount || 0), 0)
-  
+
   const totalPaid = filteredPayments
-    .filter(p => {
-      const s = (p.status || p.payment_status || '').toLowerCase()
-      return s === 'completed' || s === 'approved'
-    })
+    .filter(p => ['completed', 'approved'].includes((p.status || p.payment_status || '').toLowerCase()))
     .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-  
   stats.value.totalLoanPaid = totalPaid
   stats.value.totalLoans = stats.value.totalLoanRequested - totalPaid
-  
-  console.log('=== Full Stats After Applying Filters ===')
-  console.log('stats.value:', stats.value)
-  
-  // Update contributions by tontine for charts
+
   contributionsByTontine.value = filteredContribs.reduce((acc, c) => {
     if (!acc[c.tontine_id]) acc[c.tontine_id] = []
     acc[c.tontine_id].push(c)
     return acc
   }, {})
-  
-  console.log('=== Filtered Stats ===')
-  console.log({ 
-    totalContributions: stats.value.totalContributions,
-    penalties: stats.value.penalties 
-  })
-  
+
   updateCharts()
 }
 
@@ -574,40 +478,14 @@ const getTontineSavings = (tontineId) => {
 }
 
 const updateCharts = () => {
-  console.log('=== updateCharts() CALLED in dashboard.vue ===')
-  console.log('savingsChartCanvas.value:', savingsChartCanvas.value)
-  console.log('distributionChartCanvas.value:', distributionChartCanvas.value)
-  console.log('comprehensiveChartCanvas.value:', comprehensiveChartCanvas.value)
-  
-  nextTick(() => {
-    console.log('=== updateCharts() first nextTick ===')
-    nextTick(() => {
-      console.log('=== updateCharts() second nextTick, calling createCharts() ===')
-      createCharts()
-    })
-  })
+  nextTick(() => nextTick(() => createCharts()))
 }
 
 const createCharts = () => {
-  console.log('=== createCharts CALLED in dashboard.vue ===')
-  console.log('stats.value at createCharts start:', JSON.parse(JSON.stringify(stats.value)))
-  console.log('colorMode.value:', colorMode.value)
-  console.log('document.documentElement.classList:', Array.from(document.documentElement.classList))
   if (!Chart) return
-  
-  console.log('Destroying existing charts...')
-  if (savingsChart) {
-    console.log('Destroying savingsChart')
-    savingsChart.destroy()
-  }
-  if (distributionChart) {
-    console.log('Destroying distributionChart')
-    distributionChart.destroy()
-  }
-  if (comprehensiveChart) {
-    console.log('Destroying comprehensiveChart')
-    comprehensiveChart.destroy()
-  }
+  if (savingsChart) savingsChart.destroy()
+  if (distributionChart) distributionChart.destroy()
+  if (comprehensiveChart) comprehensiveChart.destroy()
 
   const isDark = document.documentElement.classList.contains('dark')
   console.log('isDark value in createCharts:', isDark)
@@ -685,14 +563,6 @@ const createCharts = () => {
   const pendingPenalties = Number(stats.value.penalties.pending || 0)
   const netWorth = Math.max(0, totalContribs - outstanding - pendingPenalties)
   
-  console.log('=== Personal Dashboard Net Worth Calculation ===')
-  console.log({
-    totalContribs,
-    outstanding,
-    pendingPenalties,
-    netWorth
-  })
-  
   const doughnutSegments = []
   const doughnutLabels = []
   const doughnutColors = []
@@ -713,6 +583,12 @@ const createCharts = () => {
     doughnutSegments.push(stats.value.penalties.pending)
     doughnutLabels.push('Pending Penalties')
     doughnutColors.push(chartColors.danger)
+  }
+
+  if (stats.value.surplus.total > 0) {
+    doughnutSegments.push(stats.value.surplus.total)
+    doughnutLabels.push('Overpayments')
+    doughnutColors.push(isDark ? '#c084fc' : '#9333ea')
   }
   
   if (doughnutSegments.length === 0) {
@@ -748,21 +624,19 @@ const createCharts = () => {
     })
   }
 
-  console.log('=== Personal Dashboard Comprehensive Chart ===')
-  console.log('comprehensiveChartCanvas.value:', comprehensiveChartCanvas.value)
-  console.log('comprehensive chart data:', [totalContribs, outstanding, pendingPenalties, netWorth])
   if (comprehensiveChartCanvas.value) {
     comprehensiveChart = new Chart(comprehensiveChartCanvas.value, {
       type: 'bar',
       data: {
-        labels: ['Savings', 'Loans', 'Penalties', 'Net Worth'],
+        labels: ['Savings', 'Loans', 'Penalties', 'Overpayments', 'Net Worth'],
         datasets: [{
           label: 'Amount (RWF)',
-          data: [totalContribs, outstanding, pendingPenalties, netWorth],
+          data: [totalContribs, outstanding, pendingPenalties, Number(stats.value.surplus.total || 0), netWorth],
           backgroundColor: [
             chartColors.primary + 'CC',
             chartColors.warning + 'CC',
             chartColors.danger + 'CC',
+            (isDark ? '#c084fc' : '#9333ea') + 'CC',
             chartColors.secondary + 'CC'
           ],
           borderRadius: 10,
@@ -788,10 +662,7 @@ watch([userTontines, stats, contributionsByTontine], () => {
 }, { deep: true })
 
 const colorMode = useColorMode()
-watch(() => colorMode.value, () => {
-  console.log('=== Color mode changed in dashboard.vue, updating charts ===')
-  updateCharts()
-})
+watch(() => colorMode.value, () => updateCharts())
 
 definePageMeta({ layout: 'default' })
 </script>

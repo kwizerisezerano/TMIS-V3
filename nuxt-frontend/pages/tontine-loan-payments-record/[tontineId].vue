@@ -20,6 +20,21 @@
       </div>
     </div>
 
+    <!-- Allocated Surplus Banner -->
+    <div v-if="allocatedSurplus.length > 0" class="mb-6 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-2xl">
+      <div class="flex items-center gap-2 mb-3">
+        <UIcon name="i-heroicons-gift" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
+        <span class="font-semibold text-purple-800 dark:text-purple-200 text-sm">Allocated Surplus — Members have pre-approved surplus for loan payments</span>
+      </div>
+      <div class="space-y-2">
+        <div v-for="s in allocatedSurplus" :key="s.id" class="flex items-center justify-between bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-purple-100 dark:border-purple-800 text-sm">
+          <span class="font-medium text-gray-900 dark:text-white">{{ s.user_name }}</span>
+          <span class="text-purple-700 dark:text-purple-300 font-semibold">RWF {{ parseFloat(s.amount).toLocaleString() }}</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{{ s.destination_id ? 'Loan #' + s.destination_id : 'Any loan' }} · {{ s.member_note || 'No note' }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Date Picker Card -->
     <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -176,6 +191,7 @@ const tontine = ref(null)
 const members = ref([])
 const loans = ref([])
 const records = ref([])
+const allocatedSurplus = ref([])
 const paymentDate = ref(new Date().toISOString().split('T')[0])
 const loading = ref(true)
 const saving = ref(false)
@@ -245,10 +261,15 @@ const fetchData = async () => {
     
     loans.value = allLoans.filter(loan => {
       const status = (loan.status || '').toLowerCase()
-      console.log(`Loan ${loan.id} status:`, loan.status, '→ lowercase:', status)
       return ['approved', 'received', 'disbursed'].includes(status)
     })
-    console.log('Filtered active loans:', loans.value)
+
+    // Fetch allocated surplus for loans
+    try {
+      const surplusRes = await api(`/v1/surplus/tontine/${tontineId}?status=allocated`)
+      const all = surplusRes.data || surplusRes || []
+      allocatedSurplus.value = (Array.isArray(all) ? all : []).filter(s => s.destination === 'loan')
+    } catch { allocatedSurplus.value = [] }
 
     // 3. Fetch existing loan payments for the selected date
     await fetchLoanPaymentsForDate()
