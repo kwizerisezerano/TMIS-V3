@@ -540,9 +540,9 @@ const createCharts = () => {
         animation: { duration: 1000, easing: 'easeInOutQuart' },
         interaction: { intersect: false, mode: 'index' },
         plugins: { legend: { display: false }, tooltip: {
-          backgroundColor: isDark ? '#1f2937' : '#ffffff',
-          titleColor: titleColor,
-          bodyColor: textColor,
+          backgroundColor: '#1f2937',
+          titleColor: '#f9fafb',
+          bodyColor: '#f9fafb',
           borderColor: chartColors.primary,
           borderWidth: 2,
           callbacks: { label: ctx => ['RWF ' + ctx.parsed.y.toLocaleString()] }
@@ -610,8 +610,10 @@ const createCharts = () => {
         responsive: true,
         maintainAspectRatio: false,
         cutout: '60%',
-        plugins: { legend: { position: 'bottom' }, tooltip: {
-          backgroundColor: isDark ? '#1f2937' : '#ffffff',
+        plugins: { legend: { position: 'bottom', labels: { color: textColor, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } } }, tooltip: {
+          backgroundColor: '#1f2937',
+          titleColor: '#f9fafb',
+          bodyColor: '#f9fafb',
           callbacks: {
             label: ctx => {
               const total = ctx.dataset.data.reduce((a, b) => a + b, 0)
@@ -648,7 +650,9 @@ const createCharts = () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: {
-          backgroundColor: isDark ? '#1f2937' : '#ffffff',
+          backgroundColor: '#1f2937',
+          titleColor: '#f9fafb',
+          bodyColor: '#f9fafb',
           callbacks: { label: ctx => ['RWF ' + ctx.parsed.y.toLocaleString()] }
         }},
         scales: { y: { beginAtZero: true, ticks: { color: textColor } }, x: { ticks: { color: textColor }, grid: { display: false } } }

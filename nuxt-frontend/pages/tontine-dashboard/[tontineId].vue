@@ -50,9 +50,9 @@
           <div class="bg-gradient-to-br from-blue-600 to-indigo-700 dark:from-blue-700 dark:to-indigo-800 rounded-2xl p-5 text-white shadow-lg">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-blue-50 text-sm font-medium">Total Members</p>
+                <p class="text-white text-sm font-medium">Total Members</p>
                 <p class="text-3xl font-bold mt-1">{{ stats.totalMembers }}</p>
-                <p class="text-xs text-blue-200 mt-1">{{ stats.activeMembers }} active</p>
+                <p class="text-xs text-white/80 mt-1">{{ stats.activeMembers }} active</p>
               </div>
               <div class="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center">
                 <Icon name="i-heroicons-users" class="w-7 h-7 text-white" />
@@ -313,7 +313,8 @@ const createCharts = () => {
     teal: isDark ? '#6ee7b7' : '#10b981',
     amber: isDark ? '#fbbf24' : '#f59e0b',
     red: isDark ? '#f87171' : '#ef4444',
-    bg: isDark ? '#1f2937' : '#ffffff'
+    bg: '#1f2937',
+    tooltipText: '#f9fafb'
   }
 
   const memberLabels = members.value.map(m => m.name.length > 10 ? m.name.substring(0, 10) + '…' : m.name)
@@ -325,7 +326,7 @@ const createCharts = () => {
       data: { labels: memberLabels, datasets: [{ data: memberSavings, backgroundColor: C.green + 'CC', borderRadius: 8, borderSkipped: false, maxBarThickness: 35 }] },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: C.bg, titleColor: textColor, bodyColor: textColor, callbacks: { label: ctx => 'RWF ' + ctx.parsed.y.toLocaleString() } } },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: C.bg, titleColor: C.tooltipText, bodyColor: C.tooltipText, callbacks: { label: ctx => 'RWF ' + ctx.parsed.y.toLocaleString() } } },
         scales: {
           y: { beginAtZero: true, ticks: { color: textColor, callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: gridColor } },
           x: { ticks: { color: textColor, maxRotation: 45 }, grid: { display: false } }
@@ -351,7 +352,7 @@ const createCharts = () => {
         responsive: true, maintainAspectRatio: false, cutout: '62%',
         plugins: {
           legend: { position: 'bottom', labels: { color: textColor, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } } },
-          tooltip: { backgroundColor: C.bg, callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a,b)=>a+b,0); return ['RWF '+ctx.parsed.toLocaleString(), ((ctx.parsed/t)*100).toFixed(1)+'%'] } } }
+          tooltip: { backgroundColor: C.bg, titleColor: C.tooltipText, bodyColor: C.tooltipText, callbacks: { label: ctx => { const t = ctx.dataset.data.reduce((a,b)=>a+b,0); return ['RWF '+ctx.parsed.toLocaleString(), ((ctx.parsed/t)*100).toFixed(1)+'%'] } } }
         }
       }
     })
@@ -367,7 +368,7 @@ const createCharts = () => {
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: C.bg, callbacks: { label: ctx => 'RWF ' + ctx.parsed.y.toLocaleString() } } },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: C.bg, titleColor: C.tooltipText, bodyColor: C.tooltipText, callbacks: { label: ctx => 'RWF ' + ctx.parsed.y.toLocaleString() } } },
         scales: {
           y: { beginAtZero: true, ticks: { color: textColor, callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v }, grid: { color: gridColor } },
           x: { ticks: { color: textColor }, grid: { display: false } }
