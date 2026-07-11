@@ -784,28 +784,54 @@ class ContributionsController {
         const shares = memberInfo.length > 0 ? (memberInfo[0].shares || 1) : 1;
         const expectedAmount = parseFloat(tontine.contribution_amount) * shares;
 
-        // Check if allocated surplus covers this month's contribution
+        // Check already covered this month
         const contribMonth = contributionDate.substring(0, 7);
-        const [allocatedSurplus] = await this.db.execute(
-          `SELECT * FROM surplus WHERE user_id = ? AND tontine_id = ? AND status = 'allocated' AND destination = 'contribution' ORDER BY created_at ASC`,
-          [userId, tontineId]
-        );
-        const totalAllocated = allocatedSurplus.reduce((sum, r) => sum + parseFloat(r.amount), 0);
-
         const [existingThisMonth] = await this.db.execute(
           `SELECT * FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE_FORMAT(contribution_date, '%Y-%m') = ? AND payment_status = 'Approved'`,
           [userId, tontineId, contribMonth]
         );
         const alreadyCovered = existingThisMonth.length > 0 ? parseFloat(existingThisMonth[0].amount) : 0;
-
         if (alreadyCovered >= expectedAmount) continue;
 
         const gap = parseFloat((expectedAmount - alreadyCovered).toFixed(2));
         const enteredAmount = parseFloat(amount) || 0;
-        const thisMonthAmount = Math.min(enteredAmount, gap);
-        const surplus = parseFloat((enteredAmount - thisMonthAmount).toFixed(2));
+
+        // Fetch allocated surplus for contributions
+        const [allocatedSurplusRows] = await this.db.execute(
+          `SELECT * FROM surplus WHERE user_id = ? AND tontine_id = ? AND status = 'allocated' AND destination = 'contribution' ORDER BY created_at ASC`,
+          [userId, tontineId]
+        );
+        const totalAllocatedSurplus = allocatedSurplusRows.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+
+        // How much of the gap is covered by surplus vs cash
+        const surplusUsed = parseFloat(Math.min(totalAllocatedSurplus, gap).toFixed(2));
+        const cashNeeded = parseFloat((gap - surplusUsed).toFixed(2));
+        const cashProvided = Math.min(enteredAmount, cashNeeded);
+        const thisMonthAmount = parseFloat((surplusUsed + cashProvided).toFixed(2));
+
+        // Any cash entered beyond what's needed becomes new surplus
+        const newSurplus = parseFloat((enteredAmount - cashProvided).toFixed(2));
 
         if (thisMonthAmount <= 0) continue;
+
+        // Consume allocated surplus rows oldest first
+        if (surplusUsed > 0) {
+          let remaining = surplusUsed;
+          for (const row of allocatedSurplusRows) {
+            if (remaining <= 0) break;
+            const rowAmount = parseFloat(row.amount);
+            if (rowAmount <= remaining) {
+              await this.db.execute(`UPDATE surplus SET status = 'used' WHERE id = ?`, [row.id]);
+              remaining -= rowAmount;
+            } else {
+              await this.db.execute(
+                `UPDATE surplus SET amount = amount - ?, status = 'used' WHERE id = ?`,
+                [parseFloat(remaining.toFixed(2)), row.id]
+              );
+              remaining = 0;
+            }
+          }
+        }
 
         // Check if contribution record already exists for this user, tontine, and date
         const [existing] = await this.db.execute(
@@ -837,11 +863,11 @@ class ContributionsController {
 
         await this.db.execute(
           `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, tontineId, 'contribution', thisMonthAmount, 'manual', JSON.stringify({ notes: notes || '', contributionId: existing.length > 0 ? existing[0].id : null }), paymentStatus, transactionRef, getCurrentUTCDate()]
+          [userId, tontineId, 'contribution', enteredAmount, 'manual', JSON.stringify({ notes: notes || '', contributionId: existing.length > 0 ? existing[0].id : null, appliedToContribution: thisMonthAmount, surplus: newSurplus, surplusUsed }), paymentStatus, transactionRef, getCurrentUTCDate()]
         );
 
-        // Route surplus to surplus table — member will allocate
-        if (surplus > 0) {
+        // Route new cash surplus to surplus table
+        if (newSurplus > 0) {
           const [contribRecord] = await this.db.execute(
             'SELECT id FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
             [userId, tontineId, contributionDate]
@@ -849,20 +875,25 @@ class ContributionsController {
           const sourceId = contribRecord.length > 0 ? contribRecord[0].id : (existing.length > 0 ? existing[0].id : 0);
           await this.db.execute(
             `INSERT INTO surplus (user_id, tontine_id, amount, source, source_id, status, created_at) VALUES (?, ?, ?, 'contribution', ?, 'pending', ?)`,
-            [userId, tontineId, surplus, sourceId, getCurrentUTCDate()]
+            [userId, tontineId, newSurplus, sourceId, getCurrentUTCDate()]
           );
           await this.db.execute(
             `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'contribution', ?)`,
-            [userId, 'Surplus Available', `RWF ${surplus.toLocaleString()} surplus from your contribution is available. Please go to your surplus page to allocate it.`, getCurrentUTCDate()]
+            [userId, 'Surplus Available', `RWF ${newSurplus.toLocaleString()} surplus from your contribution is available. Please go to your surplus page to allocate it.`, getCurrentUTCDate()]
           );
         }
 
-        // Notification
-        const notificationMessage = surplus > 0
-          ? `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded for ${contributionDate}. RWF ${surplus.toLocaleString()} applied as next month's contribution.`
-          : alreadyCovered > 0
-          ? `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded (RWF ${alreadyCovered.toLocaleString()} was already covered by surplus). Status: ${status}.`
-          : `An administrator has recorded a contribution of RWF ${thisMonthAmount.toLocaleString()} for you on ${contributionDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
+        // Notification — describe exactly what happened
+        let notificationMessage;
+        if (surplusUsed > 0 && cashProvided === 0) {
+          notificationMessage = `Contribution of RWF ${thisMonthAmount.toLocaleString()} for ${contributionDate} covered fully by your surplus (RWF ${surplusUsed.toLocaleString()}). Status: ${status}.`;
+        } else if (surplusUsed > 0) {
+          notificationMessage = `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded: RWF ${surplusUsed.toLocaleString()} from surplus + RWF ${cashProvided.toLocaleString()} cash. Status: ${status}.`;
+        } else if (newSurplus > 0) {
+          notificationMessage = `Contribution of RWF ${cashProvided.toLocaleString()} recorded for ${contributionDate}. RWF ${newSurplus.toLocaleString()} overpayment saved as surplus. Status: ${status}.`;
+        } else {
+          notificationMessage = `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded for ${contributionDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
+        }
 
         await this.db.execute(
           `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'contribution', ?)`,
@@ -890,7 +921,11 @@ class ContributionsController {
             contributionId: existing.length > 0 ? existing[0].id : null,
             amount: thisMonthAmount,
             date: contributionDate,
-            notes: surplus > 0 ? `${notes || ''} (RWF ${surplus.toLocaleString()} applied as next month advance)` : (notes || '')
+            notes: surplusUsed > 0
+              ? `${notes || ''} (RWF ${surplusUsed.toLocaleString()} from surplus + RWF ${cashProvided.toLocaleString()} cash)`.trim()
+              : newSurplus > 0
+              ? `${notes || ''} (RWF ${newSurplus.toLocaleString()} overpayment saved as surplus)`.trim()
+              : (notes || '')
           }, userName, status, tontines[0].name);
 
           sendEmail(userEmail, 'Contribution Status Updated - The Future', emailTemplate)

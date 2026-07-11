@@ -1,4 +1,4 @@
-  <template>
+﻿  <template>
   <div class="min-h-screen bg-white">
     <div>
       <PageHeader 
@@ -69,7 +69,6 @@
         
         <template #actions="{ item }">
           <div class="flex items-center gap-2">
-            <!-- Join button for non-members (always visible) -->
             <button 
               v-if="!isMember(item.id) && item.member_count < item.max_members && item.status === 'active'" 
               @click="showJoinModal(item)" 
@@ -78,14 +77,8 @@
             >
               Join
             </button>
-            
-            <!-- Joined badge -->
-            <span v-if="isMember(item.id)" class="text-green-600 text-sm font-medium">
-              ✓ Joined
-            </span>
-            
-            <!-- Three-dots action menu for admins -->
-            <UDropdown v-if="isAdmin" :items="getTontineActions(item)" :popper="{ placement: 'bottom-end' }">
+            <span v-if="isMember(item.id)" class="text-green-600 text-sm font-medium">âœ“ Joined</span>
+            <UDropdown v-if="isAdmin" :items="getTontineActions(item)" :popper="{ placement: 'bottom-end', strategy: 'fixed' }">
               <UButton color="gray" variant="ghost" size="xs">
                 <UIcon name="i-heroicons-ellipsis-vertical" class="w-4 h-4" />
               </UButton>
@@ -190,17 +183,9 @@ const selectedTontine = ref(null)
 const joinLoading = ref(false)
 
 
-const isAdmin = computed(() => {
-  return isAdminLevel(user.value)
-})
-
-const canCreateBranch = computed(() => {
-  return isAdminOnly(user.value)
-})
-
-const isAdminOrPresident = computed(() => {
-  return isAdminOnly(user.value)
-})
+const isAdmin = computed(() => isAdminLevel(user.value))
+const canCreateBranch = computed(() => isAdminOnly(user.value))
+const isAdminOrPresident = computed(() => isAdminOnly(user.value))
 
 onMounted(async () => {
   if (process.client) {
@@ -379,7 +364,7 @@ const confirmJoin = async () => {
     
     const toast = useToast()
     toast.add({
-      title: '✅ Join Request Sent!',
+      title: 'âœ… Join Request Sent!',
       description: 'Your request to join the tontine has been submitted',
       color: 'green'
     })
@@ -389,7 +374,7 @@ const confirmJoin = async () => {
   } catch (error) {
     const toast = useToast()
     toast.add({
-      title: '❌ Join Failed',
+      title: 'âŒ Join Failed',
       description: error.data?.message || 'Failed to join tontine',
       color: 'red'
     })
@@ -437,6 +422,40 @@ const recordPenaltyPayments = (tontineId) => {
   router.push(`/tontine-penalty-payments-record/${tontineId}`)
 }
 
+const getTontineActions = (item) => {
+  const viewGroup = [
+    { label: 'View Details', icon: 'i-heroicons-eye', click: () => viewTontine(item.id) },
+    { label: 'View Reports', icon: 'i-heroicons-chart-bar', click: () => viewTontineReport(item.id) },
+  ]
+  if (isAccountant(user.value)) {
+    viewGroup.push({ label: 'View Surplus', icon: 'i-heroicons-banknotes', click: () => navigateTo(`/tontine-surplus/${item.id}`) })
+  }
+
+  const recordGroup = []
+  if (isAccountant(user.value)) {
+    recordGroup.push({ label: 'Record Contributions', icon: 'i-heroicons-pencil-square', click: () => recordContributions(item.id) })
+    recordGroup.push({ label: 'Record Loan Payments', icon: 'i-heroicons-credit-card', click: () => recordLoanPayments(item.id) })
+    recordGroup.push({ label: 'Record Penalty Payments', icon: 'i-heroicons-exclamation-circle', click: () => recordPenaltyPayments(item.id) })
+  }
+
+  const manageGroup = []
+  if (isAdminOrPresident.value) {
+    manageGroup.push({ label: 'Manage Tontine', icon: 'i-heroicons-cog-6-tooth', click: () => manageTontine(item.id) })
+    manageGroup.push({ label: 'Meetings', icon: 'i-heroicons-calendar', click: () => manageMeetings(item.id) })
+    if (item.status === 'inactive') manageGroup.push({ label: 'Activate', icon: 'i-heroicons-play', click: () => activateTontine(item.id) })
+    if (item.status === 'active') manageGroup.push({ label: 'Deactivate', icon: 'i-heroicons-pause', click: () => deactivateTontine(item.id) })
+    manageGroup.push({ label: 'Edit', icon: 'i-heroicons-pencil', click: () => openModal('edit', item) })
+  }
+
+  const deleteGroup = []
+  if (isAdminOrPresident.value) {
+    deleteGroup.push({ label: 'Delete', icon: 'i-heroicons-trash', click: () => openModal('delete', item), class: 'text-red-600' })
+  }
+
+  return [viewGroup, ...(recordGroup.length ? [recordGroup] : []), ...(manageGroup.length ? [manageGroup] : []), ...(deleteGroup.length ? [deleteGroup] : [])]
+}
+
+
 const formatDate = (dateString) => {
   if (!dateString) return 'Not set'
   const date = new Date(dateString)
@@ -445,96 +464,6 @@ const formatDate = (dateString) => {
     month: 'short', 
     day: 'numeric' 
   })
-}
-
-const getTontineActions = (item) => {
-  const actions = []
-  
-  // View Actions Group
-  const viewActions = [
-    {
-      label: 'View Details',
-      icon: 'i-heroicons-eye',
-      click: () => viewTontine(item.id)
-    },
-    {
-      label: 'View Reports',
-      icon: 'i-heroicons-chart-bar',
-      click: () => viewTontineReport(item.id)
-    }
-  ]
-  actions.push(viewActions)
-  
-  // Manage Actions Group
-  const manageActions = [
-    {
-      label: 'Manage Tontine',
-      icon: 'i-heroicons-cog-6-tooth',
-      click: () => manageTontine(item.id)
-    }
-  ]
-
-  // Only admin and president can see Meetings
-  if (isAdminOrPresident.value) {
-    manageActions.push({
-      label: 'Meetings',
-      icon: 'i-heroicons-calendar',
-      click: () => manageMeetings(item.id)
-    })
-  }
-  
-  // Only accountants can see recording options
-  if (isAccountant(user.value)) {
-    manageActions.push({
-      label: 'Record Contributions',
-      icon: 'i-heroicons-pencil-square',
-      click: () => recordContributions(item.id)
-    })
-    manageActions.push({
-      label: 'Record Loan Payments',
-      icon: 'i-heroicons-credit-card',
-      click: () => recordLoanPayments(item.id)
-    })
-    manageActions.push({
-      label: 'Record Penalty Payments',
-      icon: 'i-heroicons-exclamation-circle',
-      click: () => recordPenaltyPayments(item.id)
-    })
-  }
-  
-  actions.push(manageActions)
-  
-  // Status Actions Group
-  const statusActions = []
-  if (item.status === 'inactive') {
-    statusActions.push({
-      label: 'Activate',
-      icon: 'i-heroicons-play',
-      click: () => activateTontine(item.id)
-    })
-  } else if (item.status === 'active') {
-    statusActions.push({
-      label: 'Deactivate',
-      icon: 'i-heroicons-pause',
-      click: () => deactivateTontine(item.id)
-    })
-  }
-  statusActions.push({
-    label: 'Edit',
-    icon: 'i-heroicons-pencil',
-    click: () => openModal('edit', item)
-  })
-  actions.push(statusActions)
-  
-  // Delete Actions Group
-  actions.push([{
-    label: 'Delete',
-    icon: 'i-heroicons-trash',
-    click: () => openModal('delete', item),
-    class: 'text-red-600'
-  }])
-  
-  return actions
 }
 
 const activateTontine = async (id) => {
@@ -549,7 +478,7 @@ const activateTontine = async (id) => {
     
     const toast = useToast()
     toast.add({
-      title: '✅ Tontine Activated!',
+      title: 'âœ… Tontine Activated!',
       description: 'Tontine has been activated successfully',
       color: 'green'
     })
@@ -558,7 +487,7 @@ const activateTontine = async (id) => {
   } catch (error) {
     const toast = useToast()
     toast.add({
-      title: '❌ Activation Failed',
+      title: 'âŒ Activation Failed',
       description: 'Failed to activate tontine',
       color: 'red'
     })
@@ -577,7 +506,7 @@ const deactivateTontine = async (id) => {
     
     const toast = useToast()
     toast.add({
-      title: '✅ Tontine Deactivated!',
+      title: 'âœ… Tontine Deactivated!',
       description: 'Tontine has been deactivated successfully',
       color: 'green'
     })
@@ -586,7 +515,7 @@ const deactivateTontine = async (id) => {
   } catch (error) {
     const toast = useToast()
     toast.add({
-      title: '❌ Deactivation Failed',
+      title: 'âŒ Deactivation Failed',
       description: 'Failed to deactivate tontine',
       color: 'red'
     })

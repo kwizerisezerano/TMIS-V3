@@ -1030,7 +1030,7 @@ class PaymentsController {
           continue; // Skip if loan not found
         }
 
-        // Split amount: loan gets remaining balance, surplus goes to contribution
+        // Split amount: loan gets remaining balance, surplus goes to surplus table
         const [paidResult] = await this.db.execute(
           `SELECT COALESCE(SUM(amount), 0) as total_paid FROM payments WHERE loan_id = ? AND status IN ('completed', 'pending')`,
           [loanId]
@@ -1053,19 +1053,14 @@ class PaymentsController {
         );
 
         if (existing.length > 0) {
-          // Update existing record
           await this.db.execute(
-            `UPDATE payments 
-             SET amount = ?, status = ?, payment_method = 'manual', payment_data = ?, updated_at = ? 
-             WHERE id = ?`,
-            [loanPayAmount, status, JSON.stringify({ notes: notes || '' }), getCurrentUTCDate(), existing[0].id]
+            `UPDATE payments SET amount = ?, status = ?, payment_method = 'manual', payment_data = ?, updated_at = ? WHERE id = ?`,
+            [loanPayAmount, status, JSON.stringify({ notes: notes || '', enteredAmount: finalAmount, surplus }), getCurrentUTCDate(), existing[0].id]
           );
         } else {
-          // Insert new record
           await this.db.execute(
-            `INSERT INTO payments (user_id, tontine_id, loan_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [userId, tontineId, loanId, 'loan_payment', loanPayAmount, 'manual', JSON.stringify({ notes: notes || '' }), status, transactionRef, getCurrentUTCDate()]
+            `INSERT INTO payments (user_id, tontine_id, loan_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [userId, tontineId, loanId, 'loan_payment', loanPayAmount, 'manual', JSON.stringify({ notes: notes || '', enteredAmount: finalAmount, surplus }), status, transactionRef, getCurrentUTCDate()]
           );
         }
 

@@ -615,7 +615,7 @@ class PenaltiesController {
         await this.db.execute(
           `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, tontineId, 'penalty', penaltyPayAmount, 'manual', JSON.stringify({ notes: notes || '', penaltyId, reason: penalty.reason, coveredBySurplus, coveredByCash }), paymentStatus, transactionRef, getCurrentUTCDate()]
+          [userId, tontineId, 'penalty', enteredAmount, 'manual', JSON.stringify({ notes: notes || '', penaltyId, reason: penalty.reason, appliedToPenalty: penaltyPayAmount, coveredBySurplus, coveredByCash, cashSurplus }), paymentStatus, transactionRef, getCurrentUTCDate()]
         );
 
         // Route cash surplus (overpayment beyond penalty) to surplus table

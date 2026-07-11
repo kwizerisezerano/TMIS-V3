@@ -13,6 +13,7 @@ const initSurplusRoutes = (db) => {
 
   // Accountant/Admin routes
   router.get('/tontine/:tontineId', recordingMiddleware, ctrl.getTontineSurplus.bind(ctrl));
+  router.get('/summary/:tontineId', authMiddleware, ctrl.getSurplusSummary.bind(ctrl));
 
   return router;
 };

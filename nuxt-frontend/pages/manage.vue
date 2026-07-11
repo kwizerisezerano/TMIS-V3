@@ -550,6 +550,9 @@
                   <UButton @click="openTontineManagement(tontine.id)" color="blue" variant="ghost" size="xs">
                     Manage
                   </UButton>
+                  <UButton @click="navigateTo(`/tontine-surplus/${tontine.id}`)" color="purple" variant="ghost" size="xs">
+                    View Surplus
+                  </UButton>
                 </td>
               </tr>
             </tbody>

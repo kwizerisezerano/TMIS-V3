@@ -112,6 +112,53 @@ class SurplusController {
     }
   }
 
+  // Admin/Accountant: get surplus summary per member for a tontine
+  async getSurplusSummary(req, res) {
+    try {
+      const tontineId = parseInt(req.params.tontineId);
+
+      const [rows] = await this.db.execute(`
+        SELECT
+          s.*,
+          u.names as user_name,
+          t.name as tontine_name
+        FROM surplus s
+        JOIN users u ON s.user_id = u.id
+        JOIN tontines t ON s.tontine_id = t.id
+        WHERE s.tontine_id = ?
+        ORDER BY s.user_id, s.created_at DESC
+      `, [tontineId]);
+
+      const decrypted = rows.map(r => {
+        try { return { ...r, user_name: decryptUserData({ names: r.user_name }).names }; }
+        catch { return r; }
+      });
+
+      // Group by member
+      const byMember = {};
+      for (const row of decrypted) {
+        if (!byMember[row.user_id]) {
+          byMember[row.user_id] = {
+            user_id: row.user_id,
+            user_name: row.user_name,
+            pending: 0, allocated: 0, used: 0,
+            rows: []
+          };
+        }
+        byMember[row.user_id][row.status] = (byMember[row.user_id][row.status] || 0) + parseFloat(row.amount);
+        byMember[row.user_id].rows.push(row);
+      }
+
+      return res.json(SUCCESS_RESPONSES.ok({
+        members: Object.values(byMember),
+        all: decrypted
+      }));
+    } catch (err) {
+      console.error('getSurplusSummary error:', err);
+      return res.status(500).json(ERROR_RESPONSES.server('Failed to fetch surplus summary'));
+    }
+  }
+
   // Mark surplus as used (called internally after accountant records)
   async markSurplusUsed(db, surplusId) {
     await db.execute(
