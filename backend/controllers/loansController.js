@@ -558,6 +558,24 @@ class LoansController {
         ]);
       }
 
+      // Emit real-time event to admins and the applicant
+      const io = req.app.get('io');
+      if (io) {
+        for (const admin of admins) {
+          io.to(`user-${admin.id}`).emit('notification-new', {
+            title: 'New Loan Application',
+            message: `A loan application of RWF ${finalLoanAmount.toLocaleString()} has been submitted.`,
+            type: 'loan'
+          });
+        }
+        io.to(`user-${finalUserId}`).emit('notification-new', {
+          title: 'Loan Application Received',
+          message: `Your loan application of RWF ${finalLoanAmount.toLocaleString()} has been received.`,
+          type: 'loan'
+        });
+        io.to(`tontine-${finalTontineId}`).emit('loans-updated', { tontineId: finalTontineId });
+      }
+
       return res.status(201).json(SUCCESS_RESPONSES.created(
         { loanId: result.insertId },
         'Loan application submitted successfully'
@@ -686,6 +704,22 @@ class LoansController {
         sendEmail(userEmail, 'Loan Status Updated - The Future', emailTemplate)
           .then(() => console.log(`Loan status email sent to ${userEmail} (user ID: ${loans[0].user_id})`))
           .catch(err => console.error(`Failed to send loan status email to ${userEmail} (user ID: ${loans[0].user_id}):`, err));
+      }
+
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user-${loans[0].user_id}`).emit('loan-status-updated', {
+          loanId,
+          status,
+          message: notificationMessage
+        });
+        io.to(`user-${loans[0].user_id}`).emit('notification-new', {
+          title: 'Loan Status Updated',
+          message: notificationMessage,
+          type: notificationType
+        });
+        io.to(`tontine-${loans[0].tontine_id}`).emit('loans-updated', { tontineId: loans[0].tontine_id });
       }
 
       return res.json(SUCCESS_RESPONSES.ok(null, 'Loan status updated successfully'));
@@ -909,6 +943,19 @@ class LoansController {
         getCurrentUTCDate()
       ]);
 
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        for (const admin of admins) {
+          io.to(`user-${admin.id}`).emit('notification-new', {
+            title: 'Loan Confirmed Received',
+            message: `${decryptedUser.names} confirmed receipt of RWF ${parseFloat(loan.amount).toLocaleString()} loan.`,
+            type: 'loan'
+          });
+        }
+        io.to(`tontine-${loan.tontine_id}`).emit('loans-updated', { tontineId: loan.tontine_id });
+      }
+
       return res.json(SUCCESS_RESPONSES.ok(
         { loanId, status: 'Received' },
         'Loan receipt confirmed successfully. Admin has been notified.'
@@ -1063,6 +1110,21 @@ class LoansController {
            VALUES (?, ?, ?, 'loan', ?)`,
           [userId, notificationTitle, notificationMessage, getCurrentUTCDate()]
         );
+      }
+
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`tontine-${tontineId}`).emit('loans-updated', { tontineId });
+        for (const loan of loans) {
+          if (loan.userId) {
+            io.to(`user-${loan.userId}`).emit('notification-new', {
+              title: 'Loan Recorded',
+              message: `A loan of RWF ${parseFloat(loan.amount || 0).toLocaleString()} has been recorded for you.`,
+              type: 'loan'
+            });
+          }
+        }
       }
 
       return ResponseHelpers.sendSuccessResponse(res, null, 'Loans saved successfully');

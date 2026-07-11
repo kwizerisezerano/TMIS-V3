@@ -471,21 +471,23 @@ onMounted(async () => {
   if (process.client) {
     initAuth()
     if (user.value) {
-      loanPaymentPhone.value = user.value.phone // Pre-fill with user's phone
+      loanPaymentPhone.value = user.value.phone
       await fetchUserTontines()
-      
-      // Auto-select tontine from URL parameter
+
       const route = useRoute()
       if (route.query.tontine) {
         const tontine = userTontines.value.find(t => t.id == route.query.tontine)
-        if (tontine) {
-          selectTontine(tontine)
-        } else {
-          loading.value = false
-        }
+        if (tontine) selectTontine(tontine)
+        else loading.value = false
       } else {
         loading.value = false
       }
+
+      // Real-time: listen for loan updates
+      const { connect, on } = useSocket()
+      connect()
+      on('loan-status-updated', () => { if (selectedTontine.value) fetchLoans() })
+      on('loans-updated', () => { if (selectedTontine.value) fetchLoans() })
     }
   }
 })
@@ -691,10 +693,6 @@ const submitLoanRequest = async () => {
       showSuccessModal.value = true
       showLoanModal.value = false
       await fetchLoans()
-      
-      // Trigger auto-refresh
-      localStorage.setItem('auto-refresh-trigger', Date.now().toString())
-      window.dispatchEvent(new CustomEvent('auto-refresh'))
     } else {
       errorMessage.value = data.message || 'Failed to submit loan request'
       showErrorModal.value = true
@@ -725,13 +723,8 @@ const confirmLoanReceipt = async () => {
     if (data) {
       successMessage.value = data.message || 'Loan receipt confirmed successfully'
       showSuccessModal.value = true
-      // Update the active loan status
       activeLoan.value.status = 'Received'
       await fetchLoans()
-
-      // Trigger auto-refresh
-      localStorage.setItem('auto-refresh-trigger', Date.now().toString())
-      window.dispatchEvent(new CustomEvent('auto-refresh'))
     }
   } catch (error) {
     errorMessage.value = error?.data?.message || error?.message || 'Failed to confirm loan receipt. Please try again.'
@@ -768,10 +761,6 @@ const processLoanPayment = async () => {
       showPaymentModal.value = false
       customPaymentAmount.value = ''
       await fetchLoans()
-      
-      // Trigger auto-refresh
-      localStorage.setItem('auto-refresh-trigger', Date.now().toString())
-      window.dispatchEvent(new CustomEvent('auto-refresh'))
     } else {
       errorMessage.value = data.message || 'Payment failed'
       showErrorModal.value = true

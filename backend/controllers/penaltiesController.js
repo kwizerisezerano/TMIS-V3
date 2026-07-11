@@ -223,6 +223,18 @@ class PenaltiesController {
         getCurrentUTCDate()
       ]);
 
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user-${userId}`).emit('penalty-applied', { tontineId, penaltyId: result.insertId });
+        io.to(`user-${userId}`).emit('notification-new', {
+          title: 'New Penalty Applied',
+          message: `A penalty of RWF ${finalAmount} has been applied. Reason: ${reason}`,
+          type: 'penalty'
+        });
+        io.to(`tontine-${tontineId}`).emit('penalties-updated', { tontineId });
+      }
+
       return res.status(201).json(SUCCESS_RESPONSES.created(
         { penaltyId: result.insertId },
         'Penalty applied successfully'
@@ -337,6 +349,18 @@ class PenaltiesController {
             .then(() => console.log(`Penalty status email sent to ${userEmail} (user ID: ${penalty[0].user_id})`))
             .catch(err => console.error(`Failed to send penalty status email to ${userEmail} (user ID: ${penalty[0].user_id}):`, err));
         }
+      }
+
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user-${penalty[0].user_id}`).emit('penalty-status-updated', { penaltyId, status });
+        io.to(`user-${penalty[0].user_id}`).emit('notification-new', {
+          title: 'Penalty Status Updated',
+          message: notificationMessage,
+          type: notificationType
+        });
+        io.to(`tontine-${penalty[0].tontine_id}`).emit('penalties-updated', { tontineId: penalty[0].tontine_id });
       }
 
       return res.json(SUCCESS_RESPONSES.ok(null, 'Penalty status updated successfully'));
@@ -671,6 +695,22 @@ class PenaltiesController {
           sendEmail(userEmail, 'Penalty Status Updated - The Future', emailTemplate)
             .then(() => console.log(`Penalty email sent to ${userEmail}`))
             .catch(err => console.error(`Failed to send penalty email:`, err));
+        }
+      }
+
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`tontine-${tontineId}`).emit('penalties-updated', { tontineId });
+        for (const payment of payments) {
+          if (payment.userId) {
+            io.to(`user-${payment.userId}`).emit('penalty-status-updated', { penaltyId: payment.penaltyId, status: payment.status });
+            io.to(`user-${payment.userId}`).emit('notification-new', {
+              title: 'Penalty Status Updated',
+              message: `Penalty #${payment.penaltyId} status updated to ${payment.status}.`,
+              type: 'penalty'
+            });
+          }
         }
       }
 

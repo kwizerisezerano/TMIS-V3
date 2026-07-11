@@ -309,6 +309,16 @@ onMounted(async () => {
         await api(`/v1/users/${user.value.id}`)
         userName.value = user.value.names || 'Member'
         await fetchDashboardData()
+
+        // Real-time: refresh dashboard on any data change
+        const { connect, on } = useSocket()
+        connect()
+        on('contributions-updated', () => fetchDashboardData())
+        on('loans-updated', () => fetchDashboardData())
+        on('penalties-updated', () => fetchDashboardData())
+        on('contribution-status-updated', () => fetchDashboardData())
+        on('loan-status-updated', () => fetchDashboardData())
+        on('penalty-status-updated', () => fetchDashboardData())
       } catch (error) {
         console.error('User validation failed:', error)
         if (error?.response?.status === 401 || error?.status === 401 || error?.data?.status === 401) {

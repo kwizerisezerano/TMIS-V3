@@ -55,10 +55,6 @@
           <UIcon name="i-heroicons-document" class="w-4 h-4 mr-1" />
           Export PDF
         </UButton>
-        <UButton @click="refreshData" color="blue" variant="ghost" size="sm">
-          <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 mr-1" />
-          Refresh
-        </UButton>
       </div>
 
       <!-- KPI Summary Cards -->
@@ -399,16 +395,6 @@ const fetchReportsData = async () => {
 
 const applyDateRange = () => {
   fetchReportsData()
-}
-
-const refreshData = () => {
-  fetchReportsData()
-  const toast = useToast()
-  toast.add({
-    title: 'Data Refreshed',
-    description: 'Financial data has been updated',
-    color: 'green'
-  })
 }
 
 const fetchAdminReports = async () => {

@@ -197,8 +197,19 @@ onMounted(async () => {
   await nextTick()
   if (user?.value) {
     await fetchNotifications()
-    notificationInterval = setInterval(fetchNotifications, 30000)
-    setupAutoRefresh()
+    // Real-time: connect socket and listen for new notifications
+    const { connect, on } = useSocket()
+    connect()
+    on('notification-new', (data) => {
+      notifications.value.unshift({
+        id: Date.now(),
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        is_read: false,
+        created_at: new Date().toISOString()
+      })
+    })
   }
   const handleClickOutside = (e) => {
     if (notificationsContainer.value && !notificationsContainer.value.contains(e.target)) {
@@ -208,16 +219,8 @@ onMounted(async () => {
   document.addEventListener('click', handleClickOutside)
   onUnmounted(() => {
     document.removeEventListener('click', handleClickOutside)
-    if (notificationInterval) clearInterval(notificationInterval)
   })
 })
-
-const setupAutoRefresh = () => {
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'auto-refresh-trigger') setTimeout(() => window.location.reload(), 500)
-  })
-  window.addEventListener('auto-refresh', () => setTimeout(() => window.location.reload(), 500))
-}
 
 const confirmLogout = () => {
   const { logout } = useAuth()

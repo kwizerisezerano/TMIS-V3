@@ -40,10 +40,7 @@
     <!-- Per-member breakdown -->
     <UCard>
       <template #header>
-        <div class="flex justify-between items-center">
-          <h3 class="text-lg font-semibold">Per-Member Surplus Breakdown</h3>
-          <UButton @click="fetchSummary" color="gray" variant="outline" size="sm" :loading="loading">Refresh</UButton>
-        </div>
+        <h3 class="text-lg font-semibold">Per-Member Surplus Breakdown</h3>
       </template>
 
       <div v-if="loading" class="text-center py-8 text-gray-500">Loading surplus...</div>

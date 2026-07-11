@@ -514,6 +514,21 @@ class ContributionsController {
           .catch(err => console.error(`Failed to send contribution status email to ${userEmail} (user ID: ${contributions[0].user_id}):`, err));
       }
 
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`user-${contributions[0].user_id}`).emit('contribution-status-updated', {
+          contributionId,
+          status
+        });
+        io.to(`user-${contributions[0].user_id}`).emit('notification-new', {
+          title: 'Contribution Status Updated',
+          message: notificationMessage,
+          type: notificationType
+        });
+        io.to(`tontine-${contributions[0].tontine_id}`).emit('contributions-updated', { tontineId: contributions[0].tontine_id });
+      }
+
       return res.json(SUCCESS_RESPONSES.ok(null, 'Contribution status updated successfully'));
 
     } catch (error) {
@@ -931,6 +946,21 @@ class ContributionsController {
           sendEmail(userEmail, 'Contribution Status Updated - The Future', emailTemplate)
             .then(() => console.log(`Contribution status email sent to ${userEmail} (user ID: ${userId})`))
             .catch(err => console.error(`Failed to send contribution status email to ${userEmail} (user ID: ${userId}):`, err));
+        }
+      }
+
+      // Emit real-time event
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`tontine-${tontineId}`).emit('contributions-updated', { tontineId });
+        for (const contrib of contributions) {
+          if (contrib.userId) {
+            io.to(`user-${contrib.userId}`).emit('notification-new', {
+              title: 'Contribution Recorded',
+              message: `A contribution has been recorded for you.`,
+              type: 'contribution'
+            });
+          }
         }
       }
 

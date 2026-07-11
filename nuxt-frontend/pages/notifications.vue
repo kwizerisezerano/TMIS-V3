@@ -160,6 +160,22 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString()
 }
 
-onMounted(() => fetchNotifications())
+onMounted(() => {
+  fetchNotifications()
+  if (process.client) {
+    const { connect, on } = useSocket()
+    connect()
+    on('notification-new', (data) => {
+      notifications.value.unshift({
+        id: Date.now(),
+        title: data.title,
+        message: data.message,
+        type: data.type || 'info',
+        is_read: false,
+        created_at: new Date().toISOString()
+      })
+    })
+  }
+})
 definePageMeta({ layout: 'default' })
 </script>

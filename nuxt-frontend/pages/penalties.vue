@@ -226,5 +226,12 @@ const outstandingAmount = computed(() =>
 
 onMounted(() => {
   fetchUserTontines()
+  if (process.client) {
+    const { connect, on } = useSocket()
+    connect()
+    on('penalty-status-updated', () => { if (selectedTontine.value) fetchPenalties(selectedTontine.value.id) })
+    on('penalties-updated', () => { if (selectedTontine.value) fetchPenalties(selectedTontine.value.id) })
+    on('penalty-applied', () => { if (selectedTontine.value) fetchPenalties(selectedTontine.value.id) })
+  }
 })
 </script>
