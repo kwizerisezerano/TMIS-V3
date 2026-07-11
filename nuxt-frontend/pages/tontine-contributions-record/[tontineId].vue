@@ -118,12 +118,25 @@
                 </td>
 
                 <!-- Amount -->
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <CurrencyInput 
-                    v-model="member.amount" 
+                <td class="px-6 py-4">
+                  <CurrencyInput
+                    v-model="member.amount"
                     :disabled="member.status === 'Not Paid'"
                     placeholder="0"
                   />
+                  <div v-if="member.status !== 'Not Paid' && getSurplusForMember(member.userId)" class="mt-1.5 space-y-0.5">
+                    <div class="text-xs text-purple-600 dark:text-purple-400">
+                      🎁 Surplus available: RWF {{ getSurplusForMember(member.userId).toLocaleString() }}
+                    </div>
+                    <div class="text-xs font-medium" :class="getSurplusForMember(member.userId) >= (member.shares * tontine.contribution_amount) ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'">
+                      <template v-if="getSurplusForMember(member.userId) >= (member.shares * tontine.contribution_amount)">
+                        ✓ Surplus fully covers this contribution — no cash needed
+                      </template>
+                      <template v-else>
+                        Surplus covers RWF {{ getSurplusForMember(member.userId).toLocaleString() }} · Cash needed: RWF {{ Math.max(0, (member.shares * tontine.contribution_amount) - getSurplusForMember(member.userId)).toLocaleString() }}
+                      </template>
+                    </div>
+                  </div>
                 </td>
 
                 <!-- Notes -->
@@ -180,6 +193,11 @@ const members = ref([])
 const records = ref([])
 const allocatedSurplus = ref([])
 const contributionDate = ref(new Date().toISOString().split('T')[0])
+
+const getSurplusForMember = (userId) => {
+  const rows = allocatedSurplus.value.filter(s => s.user_id === userId)
+  return rows.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
+}
 const loading = ref(true)
 const saving = ref(false)
 

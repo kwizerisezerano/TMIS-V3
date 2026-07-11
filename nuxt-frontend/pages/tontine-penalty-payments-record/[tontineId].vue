@@ -124,6 +124,19 @@
                     <span class="absolute right-3 text-gray-400 text-sm font-medium pointer-events-none">RWF</span>
                   </div>
                   <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">Penalty: RWF {{ parseFloat(record.amount).toLocaleString() }}</div>
+                  <div v-if="getSurplusForMember(record.userId)" class="mt-1 space-y-0.5">
+                    <div class="text-xs text-purple-600 dark:text-purple-400">
+                      🎁 Surplus available: RWF {{ getSurplusForMember(record.userId).toLocaleString() }}
+                    </div>
+                    <div v-if="parseFloat(record.paidAmount) > 0" class="text-xs text-gray-500 dark:text-gray-400">
+                      Cash: RWF {{ Math.max(0, parseFloat(record.paidAmount) - getSurplusForMember(record.userId)).toLocaleString() }}
+                      + Surplus: RWF {{ Math.min(getSurplusForMember(record.userId), parseFloat(record.paidAmount)).toLocaleString() }}
+                      = RWF {{ parseFloat(record.paidAmount).toLocaleString() }} total
+                    </div>
+                    <div v-else class="text-xs text-purple-500 dark:text-purple-400 italic">
+                      Surplus will cover RWF {{ Math.min(getSurplusForMember(record.userId), parseFloat(record.amount)).toLocaleString() }} automatically
+                    </div>
+                  </div>
                 </td>
 
                 <!-- Notes -->
@@ -178,6 +191,11 @@ const members = ref([])
 const penalties = ref([])
 const records = ref([])
 const allocatedSurplus = ref([])
+
+const getSurplusForMember = (userId) => {
+  const rows = allocatedSurplus.value.filter(s => s.user_id === userId)
+  return rows.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
+}
 const paymentDate = ref(new Date().toISOString().split('T')[0])
 const loading = ref(true)
 const saving = ref(false)

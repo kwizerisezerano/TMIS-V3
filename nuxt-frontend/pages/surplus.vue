@@ -5,7 +5,7 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Overpayments</h1>
-          <p class="text-gray-600 dark:text-gray-300 mt-1">Surplus per tontine waiting for your allocation</p>
+          <p class="text-gray-600 dark:text-gray-300 mt-1">Full history of your surplus — where it came from, where it went</p>
         </div>
         <UButton @click="navigateTo('/dashboard')" color="gray" variant="outline" class="dark:border-gray-600 dark:text-white">
           <UIcon name="i-heroicons-arrow-left" class="w-4 h-4 mr-2" />
@@ -32,7 +32,6 @@
 
       <!-- Tontine Selected View -->
       <template v-if="selectedTontine">
-        <!-- Tontine header + change button -->
         <div class="flex justify-between items-center mb-6">
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ selectedTontine.name }}</h2>
           <UButton @click="selectedTontine = null; surplusList = []" color="gray" variant="outline" size="sm" class="dark:border-gray-600 dark:text-white">
@@ -40,58 +39,102 @@
           </UButton>
         </div>
 
-        <!-- Summary cards (filtered to selected tontine) -->
+        <!-- Summary cards -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
             <div class="text-center p-4">
               <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">RWF {{ pendingTotal.toLocaleString() }}</div>
-              <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Pending Allocation</div>
+              <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Pending — needs your allocation</div>
             </div>
           </UCard>
           <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
             <div class="text-center p-4">
               <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">RWF {{ allocatedTotal.toLocaleString() }}</div>
-              <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Allocated (Awaiting Use)</div>
+              <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Allocated — waiting for accountant</div>
             </div>
           </UCard>
           <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
             <div class="text-center p-4">
               <div class="text-2xl font-bold text-green-600 dark:text-green-400">RWF {{ usedTotal.toLocaleString() }}</div>
-              <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Used</div>
+              <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">Used — applied to payments</div>
             </div>
           </UCard>
         </div>
 
-        <!-- Surplus List -->
+        <!-- Pending alert -->
+        <div v-if="pendingTotal > 0" class="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-xl flex items-start gap-3">
+          <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 shrink-0" />
+          <div>
+            <div class="font-semibold text-yellow-800 dark:text-yellow-300">You have RWF {{ pendingTotal.toLocaleString() }} unallocated</div>
+            <div class="text-sm text-yellow-700 dark:text-yellow-400 mt-0.5">Allocate it below so the accountant knows where to apply it — contribution, loan, or penalty.</div>
+          </div>
+        </div>
+
+        <!-- Surplus Timeline -->
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="p-4 sm:p-6">
-            <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-gray-400">Loading surplus...</div>
+            <h3 class="text-base font-semibold text-gray-900 dark:text-white mb-4">Surplus History</h3>
+            <div v-if="loading" class="text-center py-8 text-gray-500 dark:text-gray-400">Loading...</div>
             <div v-else-if="surplusList.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
               No overpayments found for {{ selectedTontine.name }}.
             </div>
             <div v-else class="space-y-4">
               <div v-for="item in surplusList" :key="item.id"
-                   class="p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                  <div>
-                    <div class="font-semibold text-gray-900 dark:text-white">
-                      RWF {{ parseFloat(item.amount).toLocaleString() }}
-                      <span class="ml-2 text-xs px-2 py-0.5 rounded-full" :class="statusClass(item.status)">
-                        {{ item.status }}
-                      </span>
-                    </div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      From: <span class="capitalize font-medium">{{ item.source }}</span> #{{ item.source_id }}
-                    </div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(item.created_at) }}</div>
-                    <div v-if="item.destination" class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                      Allocated to: <span class="capitalize font-medium">{{ item.destination }}</span>
-                      <span v-if="item.destination_id"> #{{ item.destination_id }}</span>
-                      <span v-if="item.member_note"> · "{{ item.member_note }}"</span>
-                    </div>
+                   class="p-4 rounded-xl border"
+                   :class="item.status === 'used' ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+                         : item.status === 'allocated' ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800'
+                         : 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-800'">
+
+                <!-- Row 1: amount + status + date -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg font-bold text-gray-900 dark:text-white">RWF {{ parseFloat(item.amount).toLocaleString() }}</span>
+                    <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="statusClass(item.status)">{{ item.status }}</span>
                   </div>
-                  <UButton v-if="item.status === 'pending'" @click="openAllocate(item)" color="green" size="sm">
-                    Allocate
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(item.created_at) }}</span>
+                </div>
+
+                <!-- Row 2: source -->
+                <div class="mt-2 flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                  <UIcon name="i-heroicons-arrow-up-circle" class="w-4 h-4 text-gray-400" />
+                  <span>Came from: <span class="font-medium capitalize text-gray-800 dark:text-gray-200">{{ item.source }}</span> #{{ item.source_id }}</span>
+                </div>
+
+                <!-- Row 3: allocation info -->
+                <div v-if="item.destination" class="mt-1 flex items-center gap-1 text-sm text-blue-700 dark:text-blue-400">
+                  <UIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4" />
+                  <span>Allocated to: <span class="font-medium capitalize">{{ item.destination }}</span>
+                    <span v-if="item.destination_id"> #{{ item.destination_id }}</span>
+                    <span v-if="item.member_note" class="text-gray-500 dark:text-gray-400"> · "{{ item.member_note }}"</span>
+                  </span>
+                </div>
+
+                <!-- Row 4: used info -->
+                <div v-if="item.status === 'used'" class="mt-1 flex items-center gap-1 text-sm text-green-700 dark:text-green-400">
+                  <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
+                  <span>Applied by accountant — fully consumed</span>
+                </div>
+
+                <!-- Row 5: timeline steps -->
+                <div class="mt-3 flex items-center gap-2 text-xs">
+                  <span class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium">1. Overpaid</span>
+                  <span class="text-gray-400">→</span>
+                  <span class="px-2 py-0.5 rounded font-medium"
+                        :class="['allocated','used'].includes(item.status) ? 'bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'">
+                    2. You allocated
+                  </span>
+                  <span class="text-gray-400">→</span>
+                  <span class="px-2 py-0.5 rounded font-medium"
+                        :class="item.status === 'used' ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'">
+                    3. Accountant applied
+                  </span>
+                </div>
+
+                <!-- Allocate button -->
+                <div v-if="item.status === 'pending'" class="mt-3">
+                  <UButton @click="openAllocate(item)" color="yellow" size="sm" variant="solid">
+                    <UIcon name="i-heroicons-arrow-right" class="w-4 h-4 mr-1" />
+                    Allocate this surplus
                   </UButton>
                 </div>
               </div>
@@ -119,25 +162,28 @@
             </h3>
           </template>
           <div class="space-y-4 p-2">
+            <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-800 dark:text-blue-300">
+              Tell the accountant what to apply this surplus to. They will use it automatically when recording your next payment.
+            </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Use this surplus for</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apply to</label>
               <select v-model="form.destination"
                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
                 <option value="">-- Select --</option>
-                <option value="contribution">Contribution</option>
-                <option value="loan">Loan Payment</option>
-                <option value="penalty">Penalty Payment</option>
+                <option value="contribution">Contribution (monthly savings)</option>
+                <option value="loan">Loan repayment</option>
+                <option value="penalty">Penalty payment</option>
               </select>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {{ form.destination === 'contribution' ? 'Contribution ID (optional)' : form.destination === 'loan' ? 'Loan ID (optional)' : 'Penalty ID (optional)' }}
+                Specific ID <span class="text-gray-400 font-normal">(optional — leave blank to let accountant decide)</span>
               </label>
-              <input v-model="form.destination_id" type="number" placeholder="Leave blank to let accountant decide"
+              <input v-model="form.destination_id" type="number" placeholder="e.g. 12"
                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Note (optional)</label>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Note to accountant <span class="text-gray-400 font-normal">(optional)</span></label>
               <input v-model="form.member_note" type="text" placeholder="e.g. Use for January contribution"
                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white" />
             </div>
@@ -159,12 +205,9 @@
 <script setup>
 const { user, initAuth } = useAuth()
 const { api } = useApi()
-const toast = useToast()
 
 const statusModal = ref({ show: false, type: 'error', title: '', message: '' })
-const showStatus = (type, title, message) => {
-  statusModal.value = { show: true, type, title, message }
-}
+const showStatus = (type, title, message) => { statusModal.value = { show: true, type, title, message } }
 
 const loading = ref(false)
 const loadingTontines = ref(true)
@@ -176,15 +219,9 @@ const showModal = ref(false)
 const selected = ref(null)
 const form = ref({ destination: '', destination_id: '', member_note: '' })
 
-const pendingTotal = computed(() =>
-  surplusList.value.filter(s => s.status === 'pending').reduce((sum, s) => sum + parseFloat(s.amount), 0)
-)
-const allocatedTotal = computed(() =>
-  surplusList.value.filter(s => s.status === 'allocated').reduce((sum, s) => sum + parseFloat(s.amount), 0)
-)
-const usedTotal = computed(() =>
-  surplusList.value.filter(s => s.status === 'used').reduce((sum, s) => sum + parseFloat(s.amount), 0)
-)
+const pendingTotal = computed(() => surplusList.value.filter(s => s.status === 'pending').reduce((sum, s) => sum + parseFloat(s.amount), 0))
+const allocatedTotal = computed(() => surplusList.value.filter(s => s.status === 'allocated').reduce((sum, s) => sum + parseFloat(s.amount), 0))
+const usedTotal = computed(() => surplusList.value.filter(s => s.status === 'used').reduce((sum, s) => sum + parseFloat(s.amount), 0))
 
 onMounted(async () => {
   if (process.client) {
@@ -199,7 +236,7 @@ const fetchTontines = async () => {
     const data = res.data || res
     userTontines.value = Array.isArray(data) ? data : (data.data || [])
   } catch (err) {
-    showStatus('error', 'Failed to Load', 'Could not load your tontines. Please refresh the page.')
+    showStatus('error', 'Failed to Load', 'Could not load your tontines. Please refresh.')
   } finally {
     loadingTontines.value = false
   }
@@ -230,7 +267,7 @@ const openAllocate = (item) => {
 }
 
 const getApiMessage = (err, fallback) =>
-  err?.data?.message || err?.response?._data?.message || err?.response?.data?.message || err?.message || fallback
+  err?.data?.message || err?.response?._data?.message || err?.message || fallback
 
 const submitAllocation = async () => {
   if (!form.value.destination) return
@@ -245,7 +282,7 @@ const submitAllocation = async () => {
       }
     })
     showModal.value = false
-    showStatus('success', 'Surplus Allocated', 'Your surplus has been allocated successfully. The accountant will apply it shortly.')
+    showStatus('success', 'Surplus Allocated', 'Your surplus has been allocated. The accountant will apply it when recording your next payment.')
     await fetchSurplus()
   } catch (err) {
     const status = err?.statusCode || err?.response?.status

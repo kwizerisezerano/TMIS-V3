@@ -138,6 +138,16 @@
                     />
                     <span class="absolute right-3 text-gray-400 text-sm font-medium pointer-events-none">RWF</span>
                   </div>
+                  <div v-if="getSurplusForMember(record.userId)" class="mt-1.5 space-y-0.5">
+                    <div class="text-xs text-purple-600 dark:text-purple-400">
+                      🎁 Surplus available: RWF {{ getSurplusForMember(record.userId).toLocaleString() }}
+                    </div>
+                    <div v-if="parseFloat(record.amount) > 0" class="text-xs text-gray-500 dark:text-gray-400">
+                      Cash: RWF {{ Math.max(0, parseFloat(record.amount) - getSurplusForMember(record.userId)).toLocaleString() }}
+                      + Surplus: RWF {{ Math.min(getSurplusForMember(record.userId), parseFloat(record.amount)).toLocaleString() }}
+                      = RWF {{ parseFloat(record.amount).toLocaleString() }} total
+                    </div>
+                  </div>
                 </td>
 
                 <!-- Notes -->
@@ -192,6 +202,11 @@ const members = ref([])
 const loans = ref([])
 const records = ref([])
 const allocatedSurplus = ref([])
+
+const getSurplusForMember = (userId) => {
+  const rows = allocatedSurplus.value.filter(s => s.user_id === userId)
+  return rows.reduce((sum, s) => sum + parseFloat(s.amount || 0), 0)
+}
 const paymentDate = ref(new Date().toISOString().split('T')[0])
 const loading = ref(true)
 const saving = ref(false)
