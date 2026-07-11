@@ -324,7 +324,8 @@ const isAdmin = computed(() => isAdminLevel(user.value))
     { name: 'Payments', href: '/payments', icon: 'i-heroicons-banknotes' },
     { name: 'Reports', href: '/reports', icon: 'i-heroicons-chart-bar' },
     { name: 'Meetings', href: '/meetings', icon: 'i-heroicons-users' },
-    { name: 'Penalties', href: '/penalties', icon: 'i-heroicons-scale' }
+    { name: 'Penalties', href: '/penalties', icon: 'i-heroicons-scale' },
+    { name: 'My Surplus', href: '/surplus', icon: 'i-heroicons-gift' }
   ]
 
   // If no user yet, show a safe default (hide admin-only reports)

@@ -1069,34 +1069,15 @@ class PaymentsController {
           );
         }
 
-        // If there is a surplus, record it as a contribution
+        // If there is a surplus, store in surplus table — member will allocate
         if (surplus > 0) {
-          const contribRef = `CONTR-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
-          const [existingContrib] = await this.db.execute(
-            'SELECT id FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
-            [userId, tontineId, paymentDate]
-          );
-          if (existingContrib.length > 0) {
-            await this.db.execute(
-              `UPDATE contributions SET amount = amount + ?, payment_status = 'Approved', payment_method = 'manual' WHERE id = ?`,
-              [surplus, existingContrib[0].id]
-            );
-          } else {
-            await this.db.execute(
-              `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, 'Approved', ?)`,
-              [userId, tontineId, surplus, paymentDate, contribRef, getCurrentUTCDate()]
-            );
-          }
-          // Payment record for the surplus contribution
-          const contribPayRef = `CONTRIB-PAY-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
           await this.db.execute(
-            `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, 'contribution', ?, 'manual', ?, 'completed', ?, ?)`,
-            [userId, tontineId, surplus, JSON.stringify({ notes: `Surplus from loan #${loanId} payment`, loanId }), contribPayRef, getCurrentUTCDate()]
+            `INSERT INTO surplus (user_id, tontine_id, amount, source, source_id, status, created_at) VALUES (?, ?, ?, 'loan', ?, 'pending', ?)`,
+            [userId, tontineId, surplus, loanId, getCurrentUTCDate()]
           );
-          // Notify user about surplus
           await this.db.execute(
             `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'payment', ?)`,
-            [userId, 'Surplus Applied to Contribution', `RWF ${surplus.toLocaleString()} surplus from your loan payment has been applied to your contribution.`, getCurrentUTCDate()]
+            [userId, 'Surplus Available', `RWF ${surplus.toLocaleString()} surplus from your loan #${loanId} payment is available. Please go to your surplus page to allocate it.`, getCurrentUTCDate()]
           );
         }
 

@@ -564,11 +564,40 @@ class PenaltiesController {
         const penalty = penalties[0];
         if (penalty.status === 'paid') continue;
 
-        // Split: penalty gets its amount, surplus goes to contribution
         const enteredAmount = paidAmount ? parseFloat(paidAmount) : parseFloat(penalty.amount);
         const penaltyAmount = parseFloat(penalty.amount);
         const penaltyPayAmount = Math.min(enteredAmount, penaltyAmount);
-        const surplus = parseFloat((enteredAmount - penaltyPayAmount).toFixed(2));
+        const cashSurplus = parseFloat((enteredAmount - penaltyPayAmount).toFixed(2));
+
+        // Check available allocated surplus for this penalty
+        const [surplusRows] = await this.db.execute(
+          `SELECT * FROM surplus WHERE user_id = ? AND tontine_id = ? AND status = 'allocated' AND destination = 'penalty' AND (destination_id = ? OR destination_id IS NULL) ORDER BY created_at ASC`,
+          [userId, tontineId, penaltyId]
+        );
+        const totalSurplus = surplusRows.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+
+        // Use allocated surplus first to cover penalty
+        const coveredBySurplus = Math.min(totalSurplus, penaltyPayAmount);
+        const coveredByCash = parseFloat((penaltyPayAmount - coveredBySurplus).toFixed(2));
+
+        // Consume surplus rows oldest first
+        if (coveredBySurplus > 0) {
+          let remaining = coveredBySurplus;
+          for (const row of surplusRows) {
+            if (remaining <= 0) break;
+            const rowAmount = parseFloat(row.amount);
+            if (rowAmount <= remaining) {
+              await this.db.execute(`UPDATE surplus SET status = 'used' WHERE id = ?`, [row.id]);
+              remaining -= rowAmount;
+            } else {
+              await this.db.execute(
+                `UPDATE surplus SET amount = amount - ?, status = 'used' WHERE id = ?`,
+                [parseFloat(remaining.toFixed(2)), row.id]
+              );
+              remaining = 0;
+            }
+          }
+        }
 
         // Update penalty status
         await this.db.execute(
@@ -586,39 +615,32 @@ class PenaltiesController {
         await this.db.execute(
           `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, tontineId, 'penalty', penaltyPayAmount, 'manual', JSON.stringify({ notes: notes || '', penaltyId, reason: penalty.reason }), paymentStatus, transactionRef, getCurrentUTCDate()]
+          [userId, tontineId, 'penalty', penaltyPayAmount, 'manual', JSON.stringify({ notes: notes || '', penaltyId, reason: penalty.reason, coveredBySurplus, coveredByCash }), paymentStatus, transactionRef, getCurrentUTCDate()]
         );
 
-        // Route surplus to contribution
-        if (surplus > 0) {
-          const contribRef = `CONTR-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
-          const [existingContrib] = await this.db.execute(
-            'SELECT id FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
-            [userId, tontineId, paymentDate]
-          );
-          if (existingContrib.length > 0) {
-            await this.db.execute(
-              `UPDATE contributions SET amount = amount + ?, payment_status = 'Approved', payment_method = 'manual' WHERE id = ?`,
-              [surplus, existingContrib[0].id]
-            );
-          } else {
-            await this.db.execute(
-              `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, 'Approved', ?)`,
-              [userId, tontineId, surplus, paymentDate, contribRef, getCurrentUTCDate()]
-            );
-          }
-          const contribPayRef = `CONTRIB-PAY-SURPLUS-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+        // Route cash surplus (overpayment beyond penalty) to surplus table
+        if (cashSurplus > 0) {
           await this.db.execute(
-            `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, 'contribution', ?, 'manual', ?, 'completed', ?, ?)`,
-            [userId, tontineId, surplus, JSON.stringify({ notes: `Surplus from penalty #${penaltyId} payment`, penaltyId }), contribPayRef, getCurrentUTCDate()]
+            `INSERT INTO surplus (user_id, tontine_id, amount, source, source_id, status, created_at) VALUES (?, ?, ?, 'penalty', ?, 'pending', ?)`,
+            [userId, tontineId, cashSurplus, penaltyId, getCurrentUTCDate()]
+          );
+          await this.db.execute(
+            `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'penalty', ?)`,
+            [userId, 'Surplus Available', `RWF ${cashSurplus.toLocaleString()} surplus from penalty #${penaltyId} payment is available. Please allocate it on your surplus page.`, getCurrentUTCDate()]
           );
         }
 
         // Notification
-        const notificationMessage = surplus > 0
-          ? `Penalty #${penaltyId} marked as ${status}. RWF ${surplus.toLocaleString()} surplus applied to your contribution.`
-          : `An administrator has updated your penalty status to ${status} on ${paymentDate}.${notes ? ' Notes: ' + notes : ''}`;
-
+        let notificationMessage;
+        if (coveredBySurplus > 0 && coveredByCash === 0) {
+          notificationMessage = `Penalty #${penaltyId} of RWF ${penaltyAmount.toLocaleString()} covered fully by your contribution surplus. Status: ${status}.`;
+        } else if (coveredBySurplus > 0) {
+          notificationMessage = `Penalty #${penaltyId}: RWF ${coveredBySurplus.toLocaleString()} covered by surplus, RWF ${coveredByCash.toLocaleString()} paid in cash. Status: ${status}.`;
+        } else if (cashSurplus > 0) {
+          notificationMessage = `Penalty #${penaltyId} marked as ${status}. RWF ${cashSurplus.toLocaleString()} surplus applied as next month's contribution.`;
+        } else {
+          notificationMessage = `Penalty #${penaltyId} status updated to ${status} on ${paymentDate}.${notes ? ' Notes: ' + notes : ''}`;
+        }
         await this.db.execute(
           `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'penalty', ?)`,
           [userId, 'Penalty Status Updated', notificationMessage, getCurrentUTCDate()]
@@ -639,7 +661,11 @@ class PenaltiesController {
             penaltyId,
             amount: penaltyPayAmount,
             reason: penalty.reason,
-            notes: surplus > 0 ? `${notes || ''} (RWF ${surplus.toLocaleString()} surplus applied to contribution)` : (notes || '')
+            notes: coveredBySurplus > 0
+              ? `${notes || ''} (RWF ${coveredBySurplus.toLocaleString()} covered by surplus, RWF ${coveredByCash.toLocaleString()} cash)`.trim()
+              : cashSurplus > 0
+              ? `${notes || ''} (RWF ${cashSurplus.toLocaleString()} surplus applied as next month contribution)`.trim()
+              : (notes || '')
           }, userName, status);
 
           sendEmail(userEmail, 'Penalty Status Updated - The Future', emailTemplate)

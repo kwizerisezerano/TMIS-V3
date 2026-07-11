@@ -34,7 +34,6 @@ export const useApi = () => {
       if (response.status === 401 && !isAuthExcluded && !options._retriedAfterRefresh) {
         return refreshAccessToken().then(success => {
           if (success) {
-            // Retry the original request with new token
             const retryOptions = {
               ...options,
               _retriedAfterRefresh: true
@@ -55,6 +54,12 @@ export const useApi = () => {
           throw new Error('Authentication failed')
         })
       }
+
+      // For all other errors, throw so catch blocks in pages receive them
+      const err = new Error(response._data?.message || response.statusText || 'Request failed')
+      err.statusCode = response.status
+      err.data = response._data
+      throw err
     }
   })
 

@@ -784,9 +784,28 @@ class ContributionsController {
         const shares = memberInfo.length > 0 ? (memberInfo[0].shares || 1) : 1;
         const expectedAmount = parseFloat(tontine.contribution_amount) * shares;
 
-        // Split: this month gets expected amount, surplus goes to next month
-        const thisMonthAmount = Math.min(finalAmount, expectedAmount);
-        const surplus = parseFloat((finalAmount - thisMonthAmount).toFixed(2));
+        // Check if allocated surplus covers this month's contribution
+        const contribMonth = contributionDate.substring(0, 7);
+        const [allocatedSurplus] = await this.db.execute(
+          `SELECT * FROM surplus WHERE user_id = ? AND tontine_id = ? AND status = 'allocated' AND destination = 'contribution' ORDER BY created_at ASC`,
+          [userId, tontineId]
+        );
+        const totalAllocated = allocatedSurplus.reduce((sum, r) => sum + parseFloat(r.amount), 0);
+
+        const [existingThisMonth] = await this.db.execute(
+          `SELECT * FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE_FORMAT(contribution_date, '%Y-%m') = ? AND payment_status = 'Approved'`,
+          [userId, tontineId, contribMonth]
+        );
+        const alreadyCovered = existingThisMonth.length > 0 ? parseFloat(existingThisMonth[0].amount) : 0;
+
+        if (alreadyCovered >= expectedAmount) continue;
+
+        const gap = parseFloat((expectedAmount - alreadyCovered).toFixed(2));
+        const enteredAmount = parseFloat(amount) || 0;
+        const thisMonthAmount = Math.min(enteredAmount, gap);
+        const surplus = parseFloat((enteredAmount - thisMonthAmount).toFixed(2));
+
+        if (thisMonthAmount <= 0) continue;
 
         // Check if contribution record already exists for this user, tontine, and date
         const [existing] = await this.db.execute(
@@ -797,7 +816,7 @@ class ContributionsController {
         if (existing.length > 0) {
           await this.db.execute(
             `UPDATE contributions SET amount = ?, payment_status = ?, payment_method = 'manual' WHERE id = ?`,
-            [thisMonthAmount, status, existing[0].id]
+            [parseFloat((alreadyCovered + thisMonthAmount).toFixed(2)), status, existing[0].id]
           );
         } else {
           const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -821,40 +840,28 @@ class ContributionsController {
           [userId, tontineId, 'contribution', thisMonthAmount, 'manual', JSON.stringify({ notes: notes || '', contributionId: existing.length > 0 ? existing[0].id : null }), paymentStatus, transactionRef, getCurrentUTCDate()]
         );
 
-        // Route surplus to next month's contribution
+        // Route surplus to surplus table — member will allocate
         if (surplus > 0) {
-          const nextMonthDate = new Date(contributionDate);
-          nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-          const nextMonthStr = nextMonthDate.toISOString().split('T')[0];
-
-          const [existingNext] = await this.db.execute(
-            'SELECT * FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
-            [userId, tontineId, nextMonthStr]
+          const [contribRecord] = await this.db.execute(
+            'SELECT id FROM contributions WHERE user_id = ? AND tontine_id = ? AND DATE(contribution_date) = DATE(?)',
+            [userId, tontineId, contributionDate]
           );
-
-          if (existingNext.length > 0) {
-            await this.db.execute(
-              `UPDATE contributions SET amount = amount + ?, payment_status = 'Approved', payment_method = 'manual' WHERE id = ?`,
-              [surplus, existingNext[0].id]
-            );
-          } else {
-            const nextRef = `CONTR-NEXT-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
-            await this.db.execute(
-              `INSERT INTO contributions (user_id, tontine_id, amount, payment_method, contribution_date, transaction_ref, payment_status, created_at) VALUES (?, ?, ?, 'manual', ?, ?, 'Approved', ?)`,
-              [userId, tontineId, surplus, nextMonthStr, nextRef, getCurrentUTCDate()]
-            );
-          }
-
-          const nextPayRef = `CONTRIB-PAY-NEXT-${Date.now()}-${userId}-${tontineId}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const sourceId = contribRecord.length > 0 ? contribRecord[0].id : (existing.length > 0 ? existing[0].id : 0);
           await this.db.execute(
-            `INSERT INTO payments (user_id, tontine_id, payment_type, amount, payment_method, payment_data, status, transaction_ref, created_at) VALUES (?, ?, 'contribution', ?, 'manual', ?, 'completed', ?, ?)`,
-            [userId, tontineId, surplus, JSON.stringify({ notes: `Advance contribution for ${nextMonthStr}`, advanceMonth: nextMonthStr }), nextPayRef, getCurrentUTCDate()]
+            `INSERT INTO surplus (user_id, tontine_id, amount, source, source_id, status, created_at) VALUES (?, ?, ?, 'contribution', ?, 'pending', ?)`,
+            [userId, tontineId, surplus, sourceId, getCurrentUTCDate()]
+          );
+          await this.db.execute(
+            `INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'contribution', ?)`,
+            [userId, 'Surplus Available', `RWF ${surplus.toLocaleString()} surplus from your contribution is available. Please go to your surplus page to allocate it.`, getCurrentUTCDate()]
           );
         }
 
         // Notification
         const notificationMessage = surplus > 0
-          ? `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded for ${contributionDate}. RWF ${surplus.toLocaleString()} applied as next month's contribution (${new Date(contributionDate.replace(/-/g, '/')).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).replace(/\w+$/, '') + new Date(new Date(contributionDate).setMonth(new Date(contributionDate).getMonth() + 1)).toLocaleString('en-US', { month: 'long', year: 'numeric' })}).`
+          ? `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded for ${contributionDate}. RWF ${surplus.toLocaleString()} applied as next month's contribution.`
+          : alreadyCovered > 0
+          ? `Contribution of RWF ${thisMonthAmount.toLocaleString()} recorded (RWF ${alreadyCovered.toLocaleString()} was already covered by surplus). Status: ${status}.`
           : `An administrator has recorded a contribution of RWF ${thisMonthAmount.toLocaleString()} for you on ${contributionDate}. Status: ${status}.${notes ? ' Notes: ' + notes : ''}`;
 
         await this.db.execute(

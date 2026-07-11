@@ -308,6 +308,29 @@ async function setupDatabase() {
     `);
     console.log('Meeting attendance table created');
 
+    // Create surplus table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS surplus (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        tontine_id INT NOT NULL,
+        amount DECIMAL(65,2) NOT NULL,
+        source ENUM('contribution','loan','penalty') NOT NULL,
+        source_id INT NOT NULL,
+        destination ENUM('contribution','loan','penalty') DEFAULT NULL,
+        destination_id INT DEFAULT NULL,
+        status ENUM('pending','allocated','used') DEFAULT 'pending',
+        member_note TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        allocated_at TIMESTAMP NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (tontine_id) REFERENCES tontines(id),
+        INDEX idx_user_tontine (user_id, tontine_id),
+        INDEX idx_status (status)
+      )
+    `);
+    console.log('Surplus table created');
+
     // Create activity_log table to track all PUT/POST actions
     await connection.execute(`
       CREATE TABLE activity_log (

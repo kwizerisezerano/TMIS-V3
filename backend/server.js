@@ -173,6 +173,7 @@ initializeRoute('/api/v1/notifications', require('./routes/v1/notifications'));
 initializeRoute('/api/v1/members', require('./routes/v1/members'));
 initializeRoute('/api/v1/applications', require('./routes/v1/applications'));
 initializeRoute('/api/v1/activity-logs', require('./routes/v1/activityLog'));
+initializeRoute('/api/v1/surplus', require('./routes/v1/surplus'));
 
 // Error handling middleware
 app.use((error, req, res, next) => {
