@@ -8,7 +8,9 @@
     <div v-if="!selectedTontine" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <UCard v-for="tontine in userTontines" :key="tontine.id" class="hover:shadow-lg transition-shadow cursor-pointer" @click="selectTontine(tontine)">
         <div class="text-center p-4">
-          <div class="text-4xl mb-4">🏦</div>
+          <div class="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-4">
+            <Icon name="i-heroicons-building-library" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+          </div>
           <h3 class="text-lg font-semibold mb-2">{{ tontine.name }}</h3>
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ tontine.description }}</p>
           <div class="text-sm">
@@ -91,11 +93,11 @@
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Penalties</p>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-600 flex items-center justify-center">
-                  <span class="text-gray-600 dark:text-gray-300">📋</span>
+                  <Icon name="i-heroicons-clipboard-document-list" class="w-5 h-5 text-gray-600 dark:text-gray-300" />
                 </div>
               </div>
             </div>
-            
+
             <!-- Pending Penalties -->
             <div class="bg-white dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-yellow-200 dark:border-yellow-600">
               <div class="flex items-center justify-between">
@@ -104,11 +106,11 @@
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Pending</p>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                  <span class="text-yellow-600 dark:text-yellow-400">⏳</span>
+                  <Icon name="i-heroicons-clock" class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                 </div>
               </div>
             </div>
-            
+
             <!-- Paid Penalties -->
             <div class="bg-white dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-green-200 dark:border-green-600">
               <div class="flex items-center justify-between">
@@ -117,11 +119,11 @@
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Paid</p>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <span class="text-green-600 dark:text-green-400">✓</span>
+                  <Icon name="i-heroicons-check-circle" class="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
               </div>
             </div>
-            
+
             <!-- Outstanding Amount -->
             <div class="bg-white dark:bg-gray-700 rounded-xl p-4 shadow-sm border border-red-200 dark:border-red-600">
               <div class="flex items-center justify-between">
@@ -130,7 +132,7 @@
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Outstanding</p>
                 </div>
                 <div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                  <span class="text-red-600 dark:text-red-400">💰</span>
+                  <Icon name="i-heroicons-banknotes" class="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
               </div>
             </div>
