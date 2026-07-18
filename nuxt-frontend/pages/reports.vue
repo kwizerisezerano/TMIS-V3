@@ -1,299 +1,227 @@
 <template>
-  <div class="min-h-screen bg-white dark:bg-slate-900 p-6">
-    <div class="max-w-7xl mx-auto">
+  <div class="min-h-screen bg-gray-50 dark:bg-slate-900 p-4 md:p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
+
       <!-- Header -->
-      <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-            <Icon name="i-heroicons-chart-bar" class="w-8 h-8 inline mr-2" />
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Icon name="i-heroicons-document-chart-bar" class="w-7 h-7 text-emerald-600" />
             Financial Reports
           </h1>
-          <p class="text-gray-600 dark:text-slate-400 mt-1">
-            {{ (isAdmin && showAdminReports) ? 'Tontine-wide financial analytics and insights' : 'Your personal financial overview' }}
+          <p class="text-sm text-gray-500 dark:text-slate-400 mt-0.5">
+            {{ isAdmin && showAdminReports ? 'Tontine-wide financial overview' : 'Your personal financial overview' }}
           </p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <!-- Toggle for admin reports -->
-          <div v-if="isAdmin" class="flex items-center gap-2">
-            <button 
-              @click="showAdminReports = !showAdminReports; fetchReportsData()" 
-              class="px-4 py-2 rounded-md border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-            >
-              {{ showAdminReports ? 'View My Reports' : 'View Admin Reports' }}
+        <div class="flex flex-wrap items-center gap-2">
+          <button v-if="isAdmin" @click="showAdminReports = !showAdminReports; loadAll()"
+            class="px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-slate-700 transition">
+            {{ showAdminReports ? 'My Reports' : 'Admin Reports' }}
+          </button>
+          <select v-model="selectedTontine" @change="loadAll"
+            class="px-3 py-1.5 text-xs border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+            <option value="">All Tontines</option>
+            <option v-for="t in tontineList" :key="t.id" :value="t.id">{{ t.name }}</option>
+          </select>
+          <select v-model="dateRange" @change="loadAll"
+            class="px-3 py-1.5 text-xs border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="180">Last 6 months</option>
+            <option value="365">Last year</option>
+            <option value="all">All time</option>
+          </select>
+          <!-- Export Dropdown -->
+          <div class="relative" ref="exportMenuRef">
+            <button @click="exportMenuOpen = !exportMenuOpen"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-emerald-600 hover:bg-emerald-700 text-white transition">
+              <Icon name="i-heroicons-arrow-down-tray" class="w-3.5 h-3.5" />
+              Export CSV
+              <Icon name="i-heroicons-chevron-down" class="w-3 h-3" />
+            </button>
+            <div v-if="exportMenuOpen"
+              class="absolute right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-lg z-20 overflow-hidden">
+              <button @click="exportCSV('current'); exportMenuOpen = false"
+                class="w-full text-left px-4 py-2.5 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2">
+                <Icon name="i-heroicons-table-cells" class="w-3.5 h-3.5 text-emerald-600" />
+                Current Tab Only
+              </button>
+              <button @click="exportCSV('full'); exportMenuOpen = false"
+                class="w-full text-left px-4 py-2.5 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700">
+                <Icon name="i-heroicons-document-text" class="w-3.5 h-3.5 text-blue-600" />
+                Full Report (All Types)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div v-if="loading" class="flex justify-center py-16">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+      </div>
+
+      <template v-else>
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
+            <p class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">Total Contributions</p>
+            <p class="text-xl font-bold text-emerald-600 mt-1">{{ fmt(summary.contributions?.totalApproved) }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ summary.contributions?.approvedCount }} approved</p>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
+            <p class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">Loans Disbursed</p>
+            <p class="text-xl font-bold text-amber-600 mt-1">{{ fmt(summary.loans?.totalDisbursed) }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ summary.loans?.activeCount }} active</p>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
+            <p class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">Loan Repayments</p>
+            <p class="text-xl font-bold text-blue-600 mt-1">{{ fmt(summary.repayments?.totalRepaid) }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ summary.repayments?.repaymentRate }}% repayment rate</p>
+          </div>
+          <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-4 shadow-sm">
+            <p class="text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">Penalties Collected</p>
+            <p class="text-xl font-bold text-red-500 mt-1">{{ fmt(summary.penalties?.paidAmount) }}</p>
+            <p class="text-xs text-gray-400 mt-1">{{ summary.penalties?.pendingCount }} pending</p>
+          </div>
+        </div>
+
+        <!-- Net Balance Bar -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="flex gap-6">
+              <div>
+                <p class="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide">Total Inflows</p>
+                <p class="text-lg font-bold text-emerald-600">{{ fmt(summary.balance?.totalInflows) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide">Total Outflows</p>
+                <p class="text-lg font-bold text-red-500">{{ fmt(summary.balance?.totalOutflows) }}</p>
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 dark:text-slate-400 uppercase tracking-wide">Net Balance</p>
+                <p class="text-lg font-bold" :class="(summary.balance?.netBalance ?? 0) >= 0 ? 'text-emerald-700' : 'text-red-600'">
+                  {{ fmt(summary.balance?.netBalance) }}
+                </p>
+              </div>
+            </div>
+            <!-- Balance progress bar -->
+            <div class="flex-1 max-w-xs">
+              <div class="flex justify-between text-xs text-gray-400 mb-1">
+                <span>Repaid</span><span>{{ summary.repayments?.repaymentRate ?? 0 }}%</span>
+              </div>
+              <div class="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div class="h-2 bg-emerald-500 rounded-full transition-all duration-500"
+                  :style="{ width: Math.min(summary.repayments?.repaymentRate ?? 0, 100) + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transactions Section -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          <!-- Tabs -->
+          <div class="flex border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+            <button v-for="tab in tabs" :key="tab.key" @click="switchTab(tab.key)"
+              class="px-5 py-3 text-sm font-medium whitespace-nowrap transition border-b-2 -mb-px"
+              :class="activeTab === tab.key
+                ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-white'">
+              {{ tab.label }}
+              <span class="ml-1.5 px-1.5 py-0.5 text-xs rounded-full"
+                :class="activeTab === tab.key ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400'">
+                {{ pagination.total }}
+              </span>
             </button>
           </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-white whitespace-nowrap">Tontine:</label>
-            <select v-model="selectedTontine" @change="fetchReportsData" class="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm">
-              <option value="">All Tontines</option>
-              <option v-for="tontine in ((isAdmin && showAdminReports) ? tontines : userTontines)" :key="tontine.id" :value="tontine.id">
-                {{ tontine.name }}
-              </option>
-            </select>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 dark:bg-slate-700/50">
+                <tr>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">#</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Date</th>
+                  <th v-if="isAdmin && showAdminReports" class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Member</th>
+                  <th class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Tontine</th>
+                  <th v-if="activeTab === 'loans'" class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Purpose</th>
+                  <th v-if="activeTab === 'penalties'" class="text-left px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Reason</th>
+                  <th class="text-right px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Amount</th>
+                  <th class="text-center px-4 py-3 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-slate-700">
+                <tr v-if="tableLoading">
+                  <td :colspan="colSpan" class="text-center py-10 text-gray-400">
+                    <div class="flex justify-center"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div></div>
+                  </td>
+                </tr>
+                <tr v-else-if="rows.length === 0">
+                  <td :colspan="colSpan" class="text-center py-10 text-gray-400 dark:text-slate-500">No records found</td>
+                </tr>
+                <tr v-for="(row, i) in rows" :key="row.id" class="hover:bg-gray-50 dark:hover:bg-slate-700/40 transition">
+                  <td class="px-4 py-3 text-gray-400 text-xs">{{ (pagination.page - 1) * pagination.limit + i + 1 }}</td>
+                  <td class="px-4 py-3 text-gray-700 dark:text-slate-300 whitespace-nowrap">{{ fmtDate(row.created_at) }}</td>
+                  <td v-if="isAdmin && showAdminReports" class="px-4 py-3 text-gray-900 dark:text-white font-medium">{{ row.user_name || '—' }}</td>
+                  <td class="px-4 py-3 text-gray-600 dark:text-slate-400">{{ row.tontine_name || '—' }}</td>
+                  <td v-if="activeTab === 'loans'" class="px-4 py-3 text-gray-600 dark:text-slate-400 max-w-[160px] truncate" :title="row.purpose">{{ row.purpose || '—' }}</td>
+                  <td v-if="activeTab === 'penalties'" class="px-4 py-3 text-gray-600 dark:text-slate-400 max-w-[160px] truncate" :title="row.reason">{{ row.reason || '—' }}</td>
+                  <td class="px-4 py-3 text-right font-semibold" :class="amountColor">
+                    RWF {{ parseFloat(row.amount || 0).toLocaleString() }}
+                  </td>
+                  <td class="px-4 py-3 text-center">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" :class="statusClass(row.status || row.payment_status)">
+                      {{ row.status || row.payment_status || '—' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div class="flex items-center gap-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-white whitespace-nowrap">Period:</label>
-            <select v-model="dateRange" @change="applyDateRange" class="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-800 text-gray-900 dark:text-white text-sm">
-              <option value="7">Last 7 days</option>
-              <option value="30">Last 30 days</option>
-              <option value="90">Last 90 days</option>
-              <option value="180">Last 6 months</option>
-              <option value="365">Last year</option>
-              <option value="all">All time</option>
+
+          <!-- Pagination -->
+          <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/30">
+            <p class="text-xs text-gray-500 dark:text-slate-400">
+              Showing {{ rows.length ? (pagination.page - 1) * pagination.limit + 1 : 0 }}–{{ Math.min(pagination.page * pagination.limit, pagination.total) }} of {{ pagination.total }}
+            </p>
+            <div class="flex items-center gap-1">
+              <button @click="goPage(1)" :disabled="pagination.page === 1"
+                class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-white transition">«</button>
+              <button @click="goPage(pagination.page - 1)" :disabled="pagination.page === 1"
+                class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-white transition">‹</button>
+              <button v-for="p in visiblePages" :key="p" @click="goPage(p)"
+                class="px-2.5 py-1 text-xs rounded border transition"
+                :class="p === pagination.page
+                  ? 'bg-emerald-600 border-emerald-600 text-white'
+                  : 'border-gray-300 dark:border-slate-600 hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-white'">
+                {{ p }}
+              </button>
+              <button @click="goPage(pagination.page + 1)" :disabled="pagination.page >= totalPages"
+                class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-white transition">›</button>
+              <button @click="goPage(totalPages)" :disabled="pagination.page >= totalPages"
+                class="px-2 py-1 text-xs rounded border border-gray-300 dark:border-slate-600 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-slate-700 dark:text-white transition">»</button>
+            </div>
+            <select v-model="pagination.limit" @change="goPage(1)"
+              class="px-2 py-1 text-xs border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 dark:text-white">
+              <option :value="10">10 / page</option>
+              <option :value="15">15 / page</option>
+              <option :value="25">25 / page</option>
+              <option :value="50">50 / page</option>
             </select>
           </div>
         </div>
-      </div>
 
-      <!-- Action Buttons -->
-      <div class="flex flex-wrap gap-3 mb-8">
-        <UButton @click="exportToCSV" color="green" variant="solid" size="sm">
-          <UIcon name="i-heroicons-document-text" class="w-4 h-4 mr-1" />
-          Export CSV
-        </UButton>
-        <UButton @click="exportToPDF" color="gray" variant="outline" size="sm">
-          <UIcon name="i-heroicons-document" class="w-4 h-4 mr-1" />
-          Export PDF
-        </UButton>
-      </div>
-
-      <!-- KPI Summary Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <UCard class="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/20">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-emerald-700 dark:text-emerald-300">Total Contributions</span>
-              <div class="p-2 bg-emerald-200 dark:bg-emerald-800 rounded-lg">
-                <Icon name="i-heroicons-banknotes" class="w-5 h-5 text-emerald-700 dark:text-emerald-300" />
-              </div>
-            </div>
-            <div class="text-2xl font-bold text-emerald-800 dark:text-emerald-200">{{ formatDashboardAmount(stats.totalContributions) }}</div>
-            <div class="flex items-center mt-2 text-xs text-emerald-600 dark:text-emerald-400">
-              <span>{{ stats.contributionCount }} transactions</span>
-              <span v-if="contributionTrend" :class="contributionTrend >= 0 ? 'text-green-600' : 'text-red-600'" class="ml-2">
-                {{ contributionTrend >= 0 ? '↑' : '↓' }} {{ Math.abs(contributionTrend) }}%
-              </span>
-            </div>
-          </div>
-        </UCard>
-        
-        <UCard class="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-amber-700 dark:text-amber-300">Loans Disbursed</span>
-              <div class="p-2 bg-amber-200 dark:bg-amber-800 rounded-lg">
-                <Icon name="i-heroicons-currency-dollar" class="w-5 h-5 text-amber-700 dark:text-amber-300" />
-              </div>
-            </div>
-            <div class="text-2xl font-bold text-amber-800 dark:text-amber-200">{{ formatDashboardAmount(stats.totalLoanRequested) }}</div>
-            <div class="flex items-center mt-2 text-xs text-amber-600 dark:text-amber-400">
-              <span>{{ stats.activeLoans }} active</span>
-              <span v-if="loanTrend" :class="loanTrend >= 0 ? 'text-green-600' : 'text-red-600'" class="ml-2">
-                {{ loanTrend >= 0 ? '↑' : '↓' }} {{ Math.abs(loanTrend) }}%
-              </span>
-            </div>
-          </div>
-        </UCard>
-        
-        <UCard class="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-blue-700 dark:text-blue-300">Loan Repayments</span>
-              <div class="p-2 bg-blue-200 dark:bg-blue-800 rounded-lg">
-                <Icon name="i-heroicons-arrow-trending-up" class="w-5 h-5 text-blue-700 dark:text-blue-300" />
-              </div>
-            </div>
-            <div class="text-2xl font-bold text-blue-800 dark:text-blue-200">{{ formatDashboardAmount(stats.totalLoanPaid) }}</div>
-            <div class="flex items-center mt-2 text-xs text-blue-600 dark:text-blue-400">
-              <span>{{ stats.paymentRate }}% repayment rate</span>
-            </div>
-          </div>
-        </UCard>
-        
-        <UCard class="border-0 shadow-lg bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/30 dark:to-violet-800/20">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-violet-700 dark:text-violet-300">{{ (isAdmin && showAdminReports) ? 'Active Members' : 'Your Tontines' }}</span>
-              <div class="p-2 bg-violet-200 dark:bg-violet-800 rounded-lg">
-                <Icon :name="(isAdmin && showAdminReports) ? 'i-heroicons-users' : 'i-heroicons-building-library'" class="w-5 h-5 text-violet-700 dark:text-violet-300" />
-              </div>
-            </div>
-            <div class="text-2xl font-bold text-violet-800 dark:text-violet-200">{{ (isAdmin && showAdminReports) ? stats.totalMembers : userTontines.length }}</div>
-            <div class="flex items-center mt-2 text-xs text-violet-600 dark:text-violet-400">
-              <span>{{ (isAdmin && showAdminReports) ? tontines.length + ' tontines' : 'Active memberships' }}</span>
-            </div>
-          </div>
-        </UCard>
-      </div>
-
-
-      <!-- Detailed Transaction Tables -->
-      <div class="grid grid-cols-1 gap-6 mb-8">
-        <!-- Contributions Table -->
-        <UCard class="border-0 shadow-lg">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Contribution Details</h3>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{ contributions.length }} records</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b-2 border-gray-200 dark:border-slate-600">
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin && showAdminReports">Member</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Tontine</th>
-                    <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Amount</th>
-                    <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in contributions" :key="item.id" class="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td class="py-3 px-4 text-gray-900 dark:text-white">{{ formatDate(item.created_at) }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin && showAdminReports">{{ item.user_name || 'N/A' }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white">{{ item.tontine_name || 'N/A' }}</td>
-                    <td class="py-3 px-4 text-right font-semibold text-green-600">RWF {{ parseFloat(item.amount || 0).toLocaleString() }}</td>
-                    <td class="py-3 px-4 text-center">
-                      <UBadge :color="getStatusColor(item.payment_status)" size="xs">
-                        {{ item.payment_status }}
-                      </UBadge>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Loans Table -->
-        <UCard class="border-0 shadow-lg">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Loan Details</h3>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{ loans.length }} records</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b-2 border-gray-200 dark:border-slate-600">
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin && showAdminReports">Member</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Tontine</th>
-                    <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Amount</th>
-                    <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in loans" :key="item.id" class="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td class="py-3 px-4 text-gray-900 dark:text-white">{{ formatDate(item.created_at) }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin && showAdminReports">{{ item.user_name || 'N/A' }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white">{{ item.tontine_name || 'N/A' }}</td>
-                    <td class="py-3 px-4 text-right font-semibold text-amber-600">RWF {{ parseFloat(item.amount || 0).toLocaleString() }}</td>
-                    <td class="py-3 px-4 text-center">
-                      <UBadge :color="getStatusColor(item.status)" size="xs">
-                        {{ item.status }}
-                      </UBadge>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Penalties Table -->
-        <UCard class="border-0 shadow-lg" v-if="penalties.length > 0">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Penalty Payments</h3>
-              <span class="text-xs text-gray-500 dark:text-gray-400">{{ penalties.length }} records</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b-2 border-gray-200 dark:border-slate-600">
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Date</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider" v-if="isAdmin && showAdminReports">Member</th>
-                    <th class="text-left py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Reason</th>
-                    <th class="text-right py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Amount</th>
-                    <th class="text-center py-3 px-4 text-xs font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in penalties" :key="item.id" class="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td class="py-3 px-4 text-gray-900 dark:text-white">{{ formatDate(item.created_at) }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white" v-if="isAdmin && showAdminReports">{{ item.user_name || 'N/A' }}</td>
-                    <td class="py-3 px-4 text-gray-900 dark:text-white truncate max-w-xs" :title="item.reason">{{ item.reason || 'N/A' }}</td>
-                    <td class="py-3 px-4 text-right font-semibold text-red-600">RWF {{ parseFloat(item.amount || 0).toLocaleString() }}</td>
-                    <td class="py-3 px-4 text-center">
-                      <UBadge color="green" size="xs">Paid</UBadge>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </UCard>
-      </div>
-
-      <!-- Financial Summary -->
-      <UCard class="border-0 shadow-lg mb-8">
-        <div class="p-6">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-6">Financial Summary</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="space-y-3">
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Total Contributions</span>
-                <span class="font-semibold text-green-600">{{ formatDashboardAmount(stats.totalContributions) }}</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Loan Repayments</span>
-                <span class="font-semibold text-blue-600">{{ formatDashboardAmount(stats.totalLoanPaid) }}</span>
-              </div>
-            </div>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Total Inflows</span>
-                <span class="font-semibold text-green-600">{{ formatDashboardAmount(stats.totalContributions + stats.totalLoanPaid) }}</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Loans Disbursed</span>
-                <span class="font-semibold text-amber-600">{{ formatDashboardAmount(stats.totalLoanRequested) }}</span>
-              </div>
-            </div>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Active Loans</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ stats.activeLoans }}</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Repayment Rate</span>
-                <span class="font-semibold text-blue-600">{{ stats.paymentRate }}%</span>
-              </div>
-            </div>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">{{ (isAdmin && showAdminReports) ? 'Total Members' : 'Your Tontines' }}</span>
-                <span class="font-semibold text-violet-600">{{ (isAdmin && showAdminReports) ? stats.totalMembers : userTontines.length }}</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700" v-if="isAdmin && showAdminReports">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Tontines</span>
-                <span class="font-semibold text-violet-600">{{ tontines.length }}</span>
-              </div>
-            </div>
-            <div class="space-y-3">
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Penalty Revenue</span>
-                <span class="font-semibold text-red-600">{{ formatDashboardAmount(penalties.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)) }}</span>
-              </div>
-              <div class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
-                <span class="text-gray-600 dark:text-slate-400 text-sm">Penalties Collected</span>
-                <span class="font-semibold text-gray-900 dark:text-white">{{ penalties.length }}</span>
-              </div>
+        <!-- Ledger Summary -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-5 shadow-sm">
+          <h3 class="text-sm font-semibold text-gray-700 dark:text-white mb-4 uppercase tracking-wide">Ledger Summary</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2 text-sm">
+            <div v-for="item in ledgerItems" :key="item.label" class="flex justify-between items-center py-2 border-b border-gray-100 dark:border-slate-700">
+              <span class="text-gray-500 dark:text-slate-400">{{ item.label }}</span>
+              <span class="font-semibold" :class="item.color">{{ item.value }}</span>
             </div>
           </div>
         </div>
-      </UCard>
+      </template>
     </div>
   </div>
 </template>
@@ -301,502 +229,214 @@
 <script setup>
 import { isAdminOnly } from '~/utils/authGuard'
 
+definePageMeta({ layout: 'default' })
+
 const { user, initAuth } = useAuth()
 const { formatDashboardAmount } = useCurrency()
+const { api } = useApi()
 
-const stats = ref({
-  totalContributions: 0,
-  totalLoanRequested: 0,
-  totalLoanPaid: 0,
-  contributionCount: 0,
-  activeLoans: 0,
-  paymentRate: 0,
-  totalMembers: 0
+const isAdmin = computed(() => isAdminOnly(user.value))
+const showAdminReports = ref(true)
+const selectedTontine = ref('')
+const dateRange = ref('all')
+const tontineList = ref([])
+const loading = ref(false)
+const tableLoading = ref(false)
+const summary = ref({})
+const rows = ref([])
+const activeTab = ref('contributions')
+const pagination = reactive({ page: 1, limit: 15, total: 0 })
+
+const tabs = [
+  { key: 'contributions', label: 'Contributions' },
+  { key: 'loans', label: 'Loans' },
+  { key: 'repayments', label: 'Repayments' },
+  { key: 'penalties', label: 'Penalties' },
+]
+
+const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.limit)))
+
+const visiblePages = computed(() => {
+  const pages = [], total = totalPages.value, cur = pagination.page
+  const start = Math.max(1, cur - 2), end = Math.min(total, cur + 2)
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
 })
 
-const contributions = ref([])
-const loans = ref([])
-const penalties = ref([])
-const tontines = ref([])
-const userTontines = ref([])
-const selectedTontine = ref('')
-const dateRange = ref('30')
-const isAdmin = computed(() => isAdminOnly(user.value))
-const showAdminReports = ref(true) // Toggle for admin to switch between admin and personal reports
-const contributionTrend = ref(null)
-const loanTrend = ref(null)
-const isLoading = ref(false)
+const amountColor = computed(() => ({
+  contributions: 'text-emerald-600',
+  loans: 'text-amber-600',
+  repayments: 'text-blue-600',
+  penalties: 'text-red-500',
+}[activeTab.value]))
+
+const colSpan = computed(() => {
+  let base = 5
+  if (isAdmin.value && showAdminReports.value) base++
+  if (activeTab.value === 'loans' || activeTab.value === 'penalties') base++
+  return base
+})
+
+const fmt = (v) => formatDashboardAmount(v ?? 0)
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+
+const statusClass = (s) => {
+  const map = {
+    approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
+    rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    disbursed: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  }
+  return map[(s || '').toLowerCase()] || 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300'
+}
+
+const ledgerItems = computed(() => {
+  const s = summary.value
+  return [
+    { label: 'Contributions (Approved)', value: fmt(s.contributions?.totalApproved), color: 'text-emerald-600' },
+    { label: 'Contributions (Pending)', value: fmt(s.contributions?.totalPending), color: 'text-yellow-600' },
+    { label: 'Loans Disbursed', value: fmt(s.loans?.totalDisbursed), color: 'text-amber-600' },
+    { label: 'Loans Repaid', value: fmt(s.repayments?.totalRepaid), color: 'text-blue-600' },
+    { label: 'Repayment Rate', value: (s.repayments?.repaymentRate ?? 0) + '%', color: 'text-blue-600' },
+    { label: 'Active Loans', value: String(s.loans?.activeCount ?? 0), color: 'text-gray-700 dark:text-white' },
+    { label: 'Pending Loans', value: String(s.loans?.pendingCount ?? 0), color: 'text-yellow-600' },
+    { label: 'Penalties Issued', value: fmt(s.penalties?.totalAmount), color: 'text-red-500' },
+    { label: 'Penalties Collected', value: fmt(s.penalties?.paidAmount), color: 'text-emerald-600' },
+    { label: 'Total Inflows', value: fmt(s.balance?.totalInflows), color: 'text-emerald-700 font-bold' },
+    { label: 'Total Outflows', value: fmt(s.balance?.totalOutflows), color: 'text-red-600 font-bold' },
+    { label: 'Net Balance', value: fmt(s.balance?.netBalance), color: (s.balance?.netBalance ?? 0) >= 0 ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold' },
+  ]
+})
+
+const buildParams = () => {
+  const p = { days: dateRange.value }
+  if (selectedTontine.value) p.tontineId = selectedTontine.value
+  if (!isAdmin.value || !showAdminReports.value) p.userId = user.value?.userId || user.value?.id
+  return p
+}
+
+const loadSummary = async () => {
+  try {
+    const res = await api('/v1/reports/summary', { params: buildParams() })
+    summary.value = res.data || res
+  } catch (e) { console.error(e) }
+}
+
+const loadTransactions = async () => {
+  tableLoading.value = true
+  try {
+    const res = await api('/v1/reports/transactions', {
+      params: { ...buildParams(), type: activeTab.value, page: pagination.page, limit: pagination.limit }
+    })
+    const d = res.data || res
+    rows.value = d.data || []
+    pagination.total = d.total ?? d.pagination?.total ?? 0
+  } catch (e) { console.error(e) }
+  finally { tableLoading.value = false }
+}
+
+const loadAll = async () => {
+  pagination.page = 1
+  await Promise.all([loadSummary(), loadTransactions()])
+}
+
+const switchTab = (key) => {
+  activeTab.value = key
+  pagination.page = 1
+  loadTransactions()
+}
+
+const goPage = (p) => {
+  if (p < 1 || p > totalPages.value) return
+  pagination.page = p
+  loadTransactions()
+}
+
+const exportMenuOpen = ref(false)
+const exportMenuRef = ref(null)
+const exportingFull = ref(false)
+
+// Close dropdown when clicking outside
+if (process.client) {
+  document.addEventListener('click', (e) => {
+    if (exportMenuRef.value && !exportMenuRef.value.contains(e.target)) {
+      exportMenuOpen.value = false
+    }
+  })
+}
+
+const downloadCSV = (csv, filename) => {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+  a.download = filename
+  a.click()
+}
+
+const buildRow = (r, type) =>
+  [fmtDate(r.created_at), type, `"${r.user_name || ''}"`, `"${r.tontine_name || ''}"`, r.amount || 0, r.status || r.payment_status || ''].join(',')
+
+const exportCSV = async (mode = 'current') => {
+  const date = new Date().toISOString().split('T')[0]
+  const headers = 'Date,Type,Member,Tontine,Amount,Status\n'
+
+  if (mode === 'current') {
+    let csv = headers
+    rows.value.forEach(r => { csv += buildRow(r, activeTab.value) + '\n' })
+    downloadCSV(csv, `report-${activeTab.value}-${date}.csv`)
+    return
+  }
+
+  // Full report — fetch all 4 types (all pages)
+  exportingFull.value = true
+  const toast = useToast()
+  try {
+    const types = ['contributions', 'loans', 'repayments', 'penalties']
+    let csv = headers
+    for (const type of types) {
+      let page = 1, fetched = 0, total = Infinity
+      while (fetched < total) {
+        const res = await api('/v1/reports/transactions', {
+          params: { ...buildParams(), type, page, limit: 200 }
+        })
+        const d = res.data || res
+        const chunk = d.data || []
+        total = d.total ?? 0
+        chunk.forEach(r => { csv += buildRow(r, type) + '\n' })
+        fetched += chunk.length
+        if (!chunk.length) break
+        page++
+      }
+    }
+    downloadCSV(csv, `full-report-${date}.csv`)
+    toast.add({ title: 'Export complete', description: 'Full report downloaded', color: 'green' })
+  } catch (e) {
+    console.error(e)
+    toast.add({ title: 'Export failed', color: 'red' })
+  } finally {
+    exportingFull.value = false
+  }
+}
 
 onMounted(async () => {
-  if (process.client) {
-    initAuth()
-    if (user.value) {
-      if (isAdmin.value) {
-        await Promise.all([
-          fetchTontines(),
-          fetchUserTontines()
-        ])
-      } else {
-        await fetchUserTontines()
-      }
-      const route = useRoute()
-      if (route.query.tontine) {
-        selectedTontine.value = route.query.tontine
-      }
-      await fetchReportsData()
-    }
-  }
-})
-
-const fetchTontines = async () => {
-  const { api } = useApi()
-  try {
-    const response = await api('/v1/tontines')
-    let data = response.data || response
-    tontines.value = Array.isArray(data) ? data : (data.data || [])
-  } catch (error) {
-    console.error('Failed to fetch tontines:', error)
-  }
-}
-
-const fetchUserTontines = async () => {
-  const { api } = useApi()
-  try {
-    const response = await api('/v1/tontines', { params: { userId: user.value.id } })
-    let data = response.data || response
-    let userTontineData = Array.isArray(data) ? data : (data.data || [])
-    // Parse numeric fields
-    userTontines.value = userTontineData.map(t => ({
-      ...t,
-      member_count: parseInt(t.member_count || 0, 10),
-      max_members: parseInt(t.max_members || 0, 10),
-      contribution_amount: parseFloat(t.contribution_amount || 0),
-      total_contributions: parseFloat(t.total_contributions || 0)
-    }))
-  } catch (error) {
-    console.error('Failed to fetch user tontines:', error)
-  }
-}
-
-const fetchReportsData = async () => {
-  try {
-    isLoading.value = true
-    if (isAdmin.value && showAdminReports.value) {
-      await fetchAdminReports()
-    } else {
-      await fetchUserReports()
-    }
-  } catch (error) {
-    console.error('Failed to fetch reports data:', error)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const applyDateRange = () => {
-  fetchReportsData()
-}
-
-const fetchAdminReports = async () => {
-  const { api } = useApi()
-  try {
-    const extractData = (response) => {
-      if (!response) return []
-      if (Array.isArray(response)) return response
-      if (response.data && Array.isArray(response.data)) {
-        return response.data
-      }
-      return []
-    }
-    
-    const contributionsRes = await api('/v1/contributions')
-    const allContributions = extractData(contributionsRes)
-    
-    const loansRes = await api('/v1/loans')
-    const allLoans = extractData(loansRes)
-    
-    const paymentsRes = await api('/v1/payments')
-    const allPayments = extractData(paymentsRes)
-    const allLoanPayments = allPayments.filter(p => p.payment_type === 'loan_payment')
-    
-    const contributionsFiltered = selectedTontine.value 
-      ? allContributions.filter(c => c.tontine_id == selectedTontine.value)
-      : allContributions
-    
-    const loansFiltered = selectedTontine.value
-      ? allLoans.filter(l => l.tontine_id == selectedTontine.value)
-      : allLoans
-    
-    const loanPaymentsFiltered = selectedTontine.value
-      ? allLoanPayments.filter(p => p.tontine_id == selectedTontine.value)
-      : allLoanPayments
-    
-    stats.value.totalContributions = contributionsFiltered
-      .filter(c => c.payment_status === 'Approved')
-      .reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
-    
-    stats.value.contributionCount = contributionsFiltered.filter(c => c.payment_status === 'Approved').length
-    stats.value.totalLoanRequested = loansFiltered.reduce((sum, l) => sum + parseFloat(l.amount || 0), 0)
-    stats.value.activeLoans = loansFiltered.filter(l => l.status === 'Approved' || l.status === 'approved').length
-    
-    stats.value.totalLoanPaid = loanPaymentsFiltered
-      .filter(p => {
-        const status = (p.status || p.payment_status || '').toLowerCase()
-        return status === 'completed' || status === 'approved'
-      })
-      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-    
-    stats.value.paymentRate = stats.value.totalLoanRequested > 0 
-      ? Math.round((stats.value.totalLoanPaid / stats.value.totalLoanRequested) * 100) 
-      : 0
-    
-    if (selectedTontine.value) {
-        const tontineResponse = await api(`/v1/tontines/${selectedTontine.value}`)
-        const tontineData = tontineResponse.data || {}
-        stats.value.totalMembers = parseInt(tontineData.member_count || tontineData.members?.length || 0, 10)
-      } else {
-        let totalMembers = 0
-        for (const tontine of tontines.value) {
-          totalMembers += parseInt(tontine.member_count || 0, 10)
-        }
-        stats.value.totalMembers = totalMembers
-      }
-    
-    contributions.value = contributionsFiltered
-    loans.value = loansFiltered
-    
-    // Get penalties from penalties table AND penalty payments from payments table
-    let allPenaltiesData = []
-    try {
-      const penaltiesRes = await api('/v1/penalties/all')
-      const penaltiesData = extractData(penaltiesRes)
-      // If penaltiesRes has a 'penalties' property, use that
-      if (penaltiesRes.data && penaltiesRes.data.penalties) {
-        allPenaltiesData = penaltiesRes.data.penalties
-      } else if (Array.isArray(penaltiesData)) {
-        allPenaltiesData = penaltiesData
-      }
-    } catch (err) {
-      console.error('Error fetching penalties:', err)
-    }
-    
-    // Get penalty payments from payments table too
-    const allPenaltyPayments = allPayments.filter(p => p.payment_type === 'penalty')
-    
-    // Combine and deduplicate properly
-    const penaltyMap = new Map()
-    const processedPenaltyIds = new Set() // To track penalty IDs we've already processed
-    
-    // First, process payments table entries and link them to penalty IDs
-    allPenaltyPayments.forEach(p => {
-      let penaltyId = null
-      let reason = null
-      let tontineId = p.tontine_id
-      
-      // Try to get penaltyId and reason from payment_data
-      if (p.payment_data) {
-        try {
-          const paymentData = typeof p.payment_data === 'string' 
-            ? JSON.parse(p.payment_data) 
-            : p.payment_data
-          penaltyId = paymentData.penaltyId || paymentData.penalty_id || null
-          reason = paymentData.reason || null
-        } catch(e) {}
-      }
-      
-      if (penaltyId) {
-        processedPenaltyIds.add(Number(penaltyId))
-        // Prefer to get reason and tontine_id from penalties table if available
-        const matchingPenalty = allPenaltiesData.find(pen => pen.id === Number(penaltyId))
-        if (matchingPenalty) {
-          penaltyMap.set(`penalty-${penaltyId}`, {
-            id: Number(penaltyId),
-            amount: matchingPenalty.amount,
-            reason: matchingPenalty.reason,
-            created_at: p.created_at, // Use payment created_at since that's when it was paid
-            tontine_id: matchingPenalty.tontine_id,
-            user_name: matchingPenalty.user_name || p.user_name
-          })
-        } else {
-          // No matching penalty in penalties table, use payment data
-          penaltyMap.set(`payment-${p.id}`, {
-            id: p.id,
-            amount: p.amount,
-            reason: reason,
-            created_at: p.created_at,
-            tontine_id: tontineId,
-            user_name: p.user_name
-          })
-        }
-      } else {
-        // No penaltyId in payment data, add as is
-        penaltyMap.set(`payment-${p.id}`, {
-          id: p.id,
-          amount: p.amount,
-          reason: reason,
-          created_at: p.created_at,
-          tontine_id: tontineId,
-          user_name: p.user_name
-        })
-      }
-    })
-    
-    // Add any paid penalties from penalties table that don't have a corresponding payment
-    allPenaltiesData.forEach(p => {
-      if (p.status === 'paid' && !processedPenaltyIds.has(p.id)) {
-        penaltyMap.set(`penalty-${p.id}`, {
-          id: p.id,
-          amount: p.amount,
-          reason: p.reason,
-          created_at: p.created_at,
-          tontine_id: p.tontine_id,
-          user_name: p.user_name
-        })
-      }
-    })
-    
-    const allPaidPenalties = Array.from(penaltyMap.values())
-    
-    penalties.value = selectedTontine.value
-      ? allPaidPenalties.filter(p => {
-          // If tontine_id is null, check if we can get it from penalty table or just exclude? Or include?
-          // Let's first try to find the penalty in the penalties table to get tontine_id
-          const matchingPenalty = allPenaltiesData.find(pen => 
-            (pen.id === p.id) || 
-            (p.payment_data && typeof p.payment_data === 'object' && p.payment_data.penaltyId == pen.id)
-          )
-          if (matchingPenalty) {
-            return matchingPenalty.tontine_id == selectedTontine.value
-          }
-          // If no matching penalty, check if p.tontine_id matches
-          return p.tontine_id == selectedTontine.value
-        })
-      : allPaidPenalties
-
-    // Calculate trends (simplified)
-    contributionTrend.value = Math.floor(Math.random() * 20) - 5
-    loanTrend.value = Math.floor(Math.random() * 30) - 10
-  } catch (error) {
-    console.error('Failed to fetch admin reports:', error)
-  }
-}
-
-const fetchUserReports = async () => {
-  const { api } = useApi()
-  try {
-    const extractData = (response) => {
-      if (!response) return []
-      if (Array.isArray(response)) return response
-      if (response.data && Array.isArray(response.data)) {
-        return response.data
-      }
-      return []
-    }
-
-    const contributionsRes = await api('/v1/contributions', { params: { userId: user.value.id } })
-    let contributionsData = extractData(contributionsRes)
-    
-    const loansRes = await api('/v1/loans', { params: { userId: user.value.id } })
-    let loansData = extractData(loansRes)
-    
-    const paymentsRes = await api('/v1/payments/history', { params: { userId: user.value.id } })
-    const paymentsData = (paymentsRes.data && paymentsRes.data.data) || paymentsRes.data || {}
-    let loanPayments = paymentsData.loanPayments || []
-    
-    // Filter by selected tontine if specified
-    if (selectedTontine.value) {
-      contributionsData = contributionsData.filter(c => c.tontine_id == selectedTontine.value)
-      loansData = loansData.filter(l => l.tontine_id == selectedTontine.value)
-      loanPayments = loanPayments.filter(p => p.tontine_id == selectedTontine.value)
-    }
-    
-    stats.value.totalContributions = contributionsData
-      .filter(c => c.payment_status === 'Approved')
-      .reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
-    
-    stats.value.contributionCount = contributionsData.filter(c => c.payment_status === 'Approved').length
-    stats.value.totalLoanRequested = loansData.reduce((sum, l) => sum + parseFloat(l.amount || 0), 0)
-    stats.value.activeLoans = loansData.filter(l => l.status === 'Approved' || l.status === 'approved').length
-    
-    stats.value.totalLoanPaid = loanPayments
-      .filter(p => {
-        const status = (p.status || p.payment_status || '').toLowerCase()
-        return status === 'completed' || status === 'approved'
-      })
-      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-    
-    stats.value.paymentRate = stats.value.totalLoanRequested > 0 
-      ? Math.round((stats.value.totalLoanPaid / stats.value.totalLoanRequested) * 100) 
-      : 0
-    
-    contributions.value = contributionsData
-    loans.value = loansData
-    penalties.value = []
-    
-    // Update active members display
-    if (selectedTontine.value) {
-      const selectedTontineData = userTontines.value.find(t => t.id == selectedTontine.value)
-      stats.value.totalMembers = selectedTontineData?.member_count || 0
-    } else {
-      stats.value.totalMembers = userTontines.value.length
-    }
-    
-    contributionTrend.value = Math.floor(Math.random() * 20) - 5
-    loanTrend.value = Math.floor(Math.random() * 30) - 10
-  } catch (error) {
-    console.error('Failed to fetch user reports:', error)
-  }
-}
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
-}
-
-const getStatusColor = (status) => {
-  switch (status?.toLowerCase()) {
-    case 'approved': return 'green'
-    case 'pending': return 'yellow'
-    case 'rejected': return 'red'
-    default: return 'gray'
-  }
-}
-
-const exportToCSV = () => {
-  const headers = ['Date', 'Type', 'Member', 'Tontine', 'Amount', 'Status']
-  
-  let csv = headers.join(',') + '\n'
-  
-  contributions.value.forEach(item => {
-    csv += `${formatDate(item.created_at)},Contribution,${item.user_name || 'N/A'},${item.tontine_name || 'N/A'},${item.amount},${item.payment_status}\n`
-  })
-  
-  loans.value.forEach(item => {
-    csv += `${formatDate(item.created_at)},Loan,${item.user_name || 'N/A'},${item.tontine_name || 'N/A'},${item.amount},${item.status}\n`
-  })
-  
-  penalties.value.forEach(item => {
-    csv += `${formatDate(item.created_at)},Penalty,${item.user_name || 'N/A'},${item.tontine_name || 'N/A'},${item.amount},Paid\n`
-  })
-  
-  const blob = new Blob([csv], { type: 'text/csv' })
-  const url = window.URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `financial-report_${new Date().toISOString().split('T')[0]}.csv`
-  a.click()
-  window.URL.revokeObjectURL(url)
-}
-
-const exportToPDF = async () => {
   if (!process.client) return
-  
+  initAuth()
+  if (!user.value) return
+  loading.value = true
   try {
-    const jsPDFModule = await import('jspdf')
-    const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF
-    
-    const doc = new jsPDF()
-    
-    // Title
-    doc.setFontSize(18)
-    doc.setTextColor(34, 197, 94)
-    doc.text('Financial Report', 20, 20)
-    
-    // Date
-    doc.setFontSize(10)
-    doc.setTextColor(100, 100, 100)
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 30)
-    
-    let yPos = 45
-    
-    // Summary Stats
-    doc.setFontSize(14)
-    doc.setTextColor(0, 0, 0)
-    doc.text('Summary', 20, yPos)
-    yPos += 10
-    
-    doc.setFontSize(11)
-    doc.text(`Total Contributions: RWF ${stats.value.totalContributions.toLocaleString()}`, 25, yPos)
-    yPos += 7
-    doc.text(`Loans Disbursed: RWF ${stats.value.totalLoanRequested.toLocaleString()}`, 25, yPos)
-    yPos += 7
-    doc.text(`Loan Repayments: RWF ${stats.value.totalLoanPaid.toLocaleString()}`, 25, yPos)
-    yPos += 7
-    doc.text(`Repayment Rate: ${stats.value.paymentRate}%`, 25, yPos)
-    yPos += 7
-    doc.text(`Active Loans: ${stats.value.activeLoans}`, 25, yPos)
-    yPos += 7
-    const penaltyTotal = penalties.value.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-    doc.text(`Penalty Revenue: RWF ${penaltyTotal.toLocaleString()}`, 25, yPos)
-    yPos += 12
-    
-    // Contributions Table Headers
-    doc.setFontSize(14)
-    doc.text('Contributions', 20, yPos)
-    yPos += 8
-    
-    doc.setFontSize(9)
-    doc.text('Date', 25, yPos)
-    doc.text('Amount', 120, yPos)
-    doc.text('Status', 160, yPos)
-    yPos += 5
-    
-    // Contributions Data
-    contributions.value.slice(0, 20).forEach(item => {
-      if (yPos > 270) { doc.addPage(); yPos = 20; }
-      doc.text(formatDate(item.created_at), 25, yPos)
-      doc.text(`RWF ${parseFloat(item.amount || 0).toLocaleString()}`, 120, yPos)
-      doc.text(item.payment_status || 'N/A', 160, yPos)
-      yPos += 5
-    })
-    
-    yPos += 5
-    
-    // Loans Table Headers
-    doc.setFontSize(14)
-    doc.text('Loans', 20, yPos)
-    yPos += 8
-    
-    doc.setFontSize(9)
-    doc.text('Date', 25, yPos)
-    doc.text('Amount', 120, yPos)
-    doc.text('Status', 160, yPos)
-    yPos += 5
-    
-    // Loans Data
-    loans.value.slice(0, 20).forEach(item => {
-      if (yPos > 270) { doc.addPage(); yPos = 20; }
-      doc.text(formatDate(item.created_at), 25, yPos)
-      doc.text(`RWF ${parseFloat(item.amount || 0).toLocaleString()}`, 120, yPos)
-      doc.text(item.status || 'N/A', 160, yPos)
-      yPos += 5
-    })
-    
-    // Save PDF
-    const fileName = `financial-report_${new Date().toISOString().split('T')[0]}.pdf`
-    doc.save(fileName)
-    
-    const toast = useToast()
-    toast.add({
-      title: 'PDF Exported',
-      description: `Report saved as ${fileName}`,
-      color: 'green'
-    })
-  } catch (error) {
-    console.error('PDF Export Error:', error)
-    const toast = useToast()
-    toast.add({
-      title: 'PDF Export Failed',
-      description: 'Could not generate PDF. Please try CSV export instead.',
-      color: 'red'
-    })
-  }
-}
+    const res = await api('/v1/tontines')
+    const d = res.data || res
+    tontineList.value = Array.isArray(d) ? d : (d.data || [])
+    const route = useRoute()
+    if (route.query.tontine) selectedTontine.value = route.query.tontine
+    await loadAll()
+  } finally { loading.value = false }
 
-definePageMeta({
-  layout: 'default'
+  document.addEventListener('click', (e) => {
+    if (exportMenuRef.value && !exportMenuRef.value.contains(e.target)) {
+      exportMenuOpen.value = false
+    }
+  })
 })
 </script>

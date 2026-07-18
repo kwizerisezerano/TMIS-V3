@@ -174,6 +174,7 @@ initializeRoute('/api/v1/members', require('./routes/v1/members'));
 initializeRoute('/api/v1/applications', require('./routes/v1/applications'));
 initializeRoute('/api/v1/activity-logs', require('./routes/v1/activityLog'));
 initializeRoute('/api/v1/surplus', require('./routes/v1/surplus'));
+initializeRoute('/api/v1/reports', require('./routes/v1/reports'));
 
 // Error handling middleware
 app.use((error, req, res, next) => {
