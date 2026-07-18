@@ -91,17 +91,11 @@
       <div v-if="activeTab === 'penalties'">
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="p-4 sm:p-6">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Penalty Payment History
-            </h2>
-            <div v-if="loading" class="text-center py-8">
-              <div class="text-gray-500 dark:text-gray-400">Loading penalty payments...</div>
-            </div>
-            <div v-else-if="penaltyPayments.length === 0" class="text-center py-8">
-              <div class="text-gray-500 dark:text-gray-400">No penalty payments found</div>
-            </div>
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Penalty Payment History</h2>
+            <div v-if="loading" class="text-center py-8"><div class="text-gray-500 dark:text-gray-400">Loading...</div></div>
+            <div v-else-if="payments.length === 0" class="text-center py-8"><div class="text-gray-500 dark:text-gray-400">No penalty payments found</div></div>
             <div v-else class="space-y-3">
-              <div v-for="payment in penaltyPayments" :key="payment.id" 
+              <div v-for="payment in payments" :key="payment.id"
                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow">
                 <div class="mb-2 sm:mb-0">
                   <div class="font-semibold text-gray-900 dark:text-white">{{ payment.tontine_name || 'Penalty Payment' }}</div>
@@ -110,11 +104,14 @@
                 </div>
                 <div class="text-left sm:text-right">
                   <div class="text-lg font-bold text-red-600 dark:text-red-400">RWF {{ parseFloat(payment.amount).toLocaleString() }}</div>
-                  <div class="flex items-center gap-2 justify-start sm:justify-end mt-1">
-                    <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
-                      Paid
-                    </span>
-                  </div>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">Paid</span>
+                </div>
+              </div>
+              <div v-if="totalPages > 1" class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }} ({{ totalItems }} total)</span>
+                <div class="flex gap-2">
+                  <UButton size="xs" variant="outline" :disabled="currentPage === 1" @click="currentPage--; fetchPage()">Previous</UButton>
+                  <UButton size="xs" variant="outline" :disabled="currentPage === totalPages" @click="currentPage++; fetchPage()">Next</UButton>
                 </div>
               </div>
             </div>
@@ -126,17 +123,11 @@
       <div v-if="activeTab === 'contributions'">
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="p-4 sm:p-6">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Contribution History
-            </h2>
-            <div v-if="loading" class="text-center py-8">
-              <div class="text-gray-500 dark:text-gray-400">Loading contributions...</div>
-            </div>
-            <div v-else-if="contributions.length === 0" class="text-center py-8">
-              <div class="text-gray-500 dark:text-gray-400">No contributions found</div>
-            </div>
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Contribution History</h2>
+            <div v-if="loading" class="text-center py-8"><div class="text-gray-500 dark:text-gray-400">Loading...</div></div>
+            <div v-else-if="payments.length === 0" class="text-center py-8"><div class="text-gray-500 dark:text-gray-400">No contributions found</div></div>
             <div v-else class="space-y-3">
-              <div v-for="contribution in contributions" :key="contribution.id" 
+              <div v-for="contribution in payments" :key="contribution.id"
                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow">
                 <div class="mb-2 sm:mb-0">
                   <div class="font-semibold text-gray-900 dark:text-white">{{ contribution.tontine_name }}</div>
@@ -145,11 +136,16 @@
                 <div class="text-left sm:text-right">
                   <div class="text-lg font-bold text-green-600 dark:text-green-400">RWF {{ parseFloat(contribution.amount).toLocaleString() }}</div>
                   <div class="flex items-center gap-2 justify-start sm:justify-end mt-1">
-                    <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
-                      Completed
-                    </span>
+                    <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">Completed</span>
                     <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatPaymentMethod(contribution.payment_method) }}</span>
                   </div>
+                </div>
+              </div>
+              <div v-if="totalPages > 1" class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }} ({{ totalItems }} total)</span>
+                <div class="flex gap-2">
+                  <UButton size="xs" variant="outline" :disabled="currentPage === 1" @click="currentPage--; fetchPage()">Previous</UButton>
+                  <UButton size="xs" variant="outline" :disabled="currentPage === totalPages" @click="currentPage++; fetchPage()">Next</UButton>
                 </div>
               </div>
             </div>
@@ -161,17 +157,11 @@
       <div v-if="activeTab === 'loans'">
         <UCard class="border-0 shadow-md bg-white dark:bg-gray-800">
           <div class="p-4 sm:p-6">
-            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Loan Payment History
-            </h2>
-            <div v-if="loading" class="text-center py-8">
-              <div class="text-gray-500 dark:text-gray-400">Loading loan payments...</div>
-            </div>
-            <div v-else-if="loanPayments.length === 0" class="text-center py-8">
-              <div class="text-gray-500 dark:text-gray-400">No loan payments found</div>
-            </div>
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4">Loan Payment History</h2>
+            <div v-if="loading" class="text-center py-8"><div class="text-gray-500 dark:text-gray-400">Loading...</div></div>
+            <div v-else-if="payments.length === 0" class="text-center py-8"><div class="text-gray-500 dark:text-gray-400">No loan payments found</div></div>
             <div v-else class="space-y-3">
-              <div v-for="payment in loanPayments" :key="payment.id" 
+              <div v-for="payment in payments" :key="payment.id"
                    class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow">
                 <div class="mb-2 sm:mb-0">
                   <div class="font-semibold text-gray-900 dark:text-white">{{ payment.tontine_name }}</div>
@@ -181,14 +171,17 @@
                 <div class="text-left sm:text-right">
                   <div class="text-lg font-bold" :class="{
                     'text-green-600 dark:text-green-400': isPaymentApproved(payment.payment_status),
-                    'text-yellow-600 dark:text-yellow-400': isPaymentPending(payment.payment_status), 
+                    'text-yellow-600 dark:text-yellow-400': isPaymentPending(payment.payment_status),
                     'text-red-600 dark:text-red-400': isPaymentFailed(payment.payment_status)
                   }">RWF {{ parseFloat(payment.amount).toLocaleString() }}</div>
-                  <div class="flex items-center gap-2 justify-start sm:justify-end mt-1">
-                    <span class="text-xs px-2 py-0.5 rounded-full" :class="getStatusClass(payment.payment_status)">
-                      {{ formatPaymentStatus(payment.payment_status) }}
-                    </span>
-                  </div>
+                  <span class="text-xs px-2 py-0.5 rounded-full" :class="getStatusClass(payment.payment_status)">{{ formatPaymentStatus(payment.payment_status) }}</span>
+                </div>
+              </div>
+              <div v-if="totalPages > 1" class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
+                <span class="text-sm text-gray-500 dark:text-gray-400">Page {{ currentPage }} of {{ totalPages }} ({{ totalItems }} total)</span>
+                <div class="flex gap-2">
+                  <UButton size="xs" variant="outline" :disabled="currentPage === 1" @click="currentPage--; fetchPage()">Previous</UButton>
+                  <UButton size="xs" variant="outline" :disabled="currentPage === totalPages" @click="currentPage++; fetchPage()">Next</UButton>
                 </div>
               </div>
             </div>
@@ -213,99 +206,94 @@ const { user, initAuth } = useAuth()
 
 const activeTab = ref('contributions')
 const loading = ref(true)
-const contributions = ref([])
-const loanPayments = ref([])
-const penaltyPayments = ref([])
+const payments = ref([])
 const userTontines = ref([])
 const selectedTontine = ref(null)
+const currentPage = ref(1)
+const totalPages = ref(1)
+const totalItems = ref(0)
+const pageSize = 10
 
-// All data (unfiltered)
-const allContributions = ref([])
-const allLoanPayments = ref([])
-const allPenaltyPayments = ref([])
+// Summary totals (fetched separately per tab switch)
+const totalContributions = ref(0)
+const totalLoanPayments = ref(0)
+const totalPenaltyPayments = ref(0)
+const totalTransactions = ref(0)
 
 const tontineOptions = computed(() => {
   return [{ id: null, name: 'All Tontines' }, ...userTontines.value.map(t => ({ id: t.id, name: t.name }))]
-})
-
-const totalContributions = computed(() => {
-  return contributions.value.reduce((sum, c) => sum + parseFloat(c.amount || 0), 0)
-})
-
-const totalLoanPayments = computed(() => {
-  return loanPayments.value.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-})
-
-const totalPenaltyPayments = computed(() => {
-  return penaltyPayments.value.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0)
-})
-
-const totalTransactions = computed(() => {
-  return contributions.value.length + loanPayments.value.length + penaltyPayments.value.length
 })
 
 onMounted(async () => {
   if (process.client) {
     initAuth()
     if (user.value) {
-      await fetchPaymentHistory()
+      await fetchTontines()
+      await Promise.all([fetchSummary(), fetchPage()])
     }
   }
 })
 
-const fetchPaymentHistory = async () => {
+watch(activeTab, () => {
+  currentPage.value = 1
+  fetchPage()
+})
+
+const fetchTontines = async () => {
   const { api } = useApi()
   try {
-    // Fetch user's tontines for filter dropdown
-    const tontinesRes = await api('/v1/tontines', { params: { userId: user.value.id, limit: 100 } })
-    const tontinesData = tontinesRes.data || tontinesRes || {}
-    userTontines.value = tontinesData.data || tontinesData || []
+    const res = await api('/v1/tontines', { params: { userId: user.value.id, limit: 100 } })
+    const d = res.data || res || {}
+    userTontines.value = d.data || d || []
+  } catch {}
+}
 
-    // Fetch payment history from the dedicated history endpoint
-    const historyRes = await api('/v1/payments/history', { params: { userId: user.value.id } })
-    const historyData = historyRes.data || historyRes || {}
-    
-    // Get contributions, loan payments, and penalty payments from the history endpoint
-    allContributions.value = historyData.contributions || []
-    allLoanPayments.value = historyData.loanPayments || []
-    allPenaltyPayments.value = historyData.penaltyPayments || []
+const fetchSummary = async () => {
+  const { api } = useApi()
+  try {
+    const params = { userId: user.value.id, type: 'summary' }
+    if (selectedTontine.value) params.tontineId = selectedTontine.value
+    const res = await api('/v1/payments/history', { params })
+    const d = res.data || res || {}
+    totalContributions.value = d.totalContributions || 0
+    totalLoanPayments.value = d.totalLoanPayments || 0
+    totalPenaltyPayments.value = d.totalPenaltyPayments || 0
+    totalTransactions.value = d.totalTransactions || 0
+  } catch {}
+}
 
-    // Apply initial filter
-    filterByTontine()
+const fetchPage = async () => {
+  const { api } = useApi()
+  loading.value = true
+  try {
+    const typeMap = { contributions: 'contributions', loans: 'loans', penalties: 'penalties' }
+    const params = {
+      userId: user.value.id,
+      type: typeMap[activeTab.value],
+      page: currentPage.value,
+      limit: pageSize
+    }
+    if (selectedTontine.value) params.tontineId = selectedTontine.value
 
+    const res = await api('/v1/payments/history', { params })
+    const d = res.data || res || {}
+    payments.value = d.data || []
+    totalPages.value = d.pagination?.pages || 1
+    totalItems.value = d.pagination?.total || 0
   } catch (error) {
     console.error('Failed to fetch payment history:', error)
-    allContributions.value = []
-    allLoanPayments.value = []
-    allPenaltyPayments.value = []
-    contributions.value = []
-    loanPayments.value = []
-    penaltyPayments.value = []
+    payments.value = []
     const toast = useToast()
-    toast.add({
-      title: '❌ Error',
-      description: 'Failed to load payment history',
-      color: 'red'
-    })
+    toast.add({ title: '❌ Error', description: 'Failed to load payment history', color: 'red' })
   } finally {
     loading.value = false
   }
 }
 
 const filterByTontine = () => {
-  const tontineId = selectedTontine.value
-  
-  if (!tontineId) {
-    // Show all data
-    contributions.value = [...allContributions.value]
-    loanPayments.value = [...allLoanPayments.value]
-    penaltyPayments.value = [...allPenaltyPayments.value]
-  } else {
-    // Filter by tontine
-    contributions.value = allContributions.value.filter(c => c.tontine_id === tontineId)
-    loanPayments.value = allLoanPayments.value.filter(p => p.tontine_id === tontineId)
-    penaltyPayments.value = allPenaltyPayments.value.filter(p => p.tontine_id === tontineId)
-  }
+  currentPage.value = 1
+  fetchSummary()
+  fetchPage()
 }
 
 const formatPaymentMethod = (method) => {
@@ -366,19 +354,10 @@ const getStatusClass = (status) => {
 const exportPaymentHistory = () => {
   try {
     let csvContent = 'Type,Tontine,Date,Amount,Status,Payment Method\n'
-    
-    contributions.value.forEach(c => {
-      csvContent += `Contribution,"${c.tontine_name}",${c.created_at},Completed,${formatPaymentMethod(c.payment_method)}\n`
+    payments.value.forEach(p => {
+      const type = activeTab.value === 'contributions' ? 'Contribution' : activeTab.value === 'loans' ? 'Loan Payment' : 'Penalty Payment'
+      csvContent += `${type},"${p.tontine_name || 'N/A'}",${p.created_at},${p.amount},${p.payment_status || p.status || 'N/A'},${formatPaymentMethod(p.payment_method)}\n`
     })
-    
-    loanPayments.value.forEach(p => {
-      csvContent += `Loan Payment,"${p.tontine_name}",${p.created_at},${p.amount},${p.payment_status},${formatPaymentMethod(p.payment_method)}\n`
-    })
-    
-    penaltyPayments.value.forEach(p => {
-      csvContent += `Penalty Payment,"${p.tontine_name || 'N/A'}",${p.created_at},${p.amount},Paid,Mobile Money\n`
-    })
-    
     const blob = new Blob([csvContent], { type: 'text/csv' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')

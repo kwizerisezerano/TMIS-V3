@@ -757,49 +757,92 @@ class PaymentsController {
   // Get payment history for a user (contributions, loan payments, penalties)
   async getPaymentHistory(req, res) {
     try {
-      // Support getting userId from query param or from authenticated user (req.user)
-      const { userId: queryUserId } = req.query;
+      const { userId: queryUserId, type = 'contributions', page = 1, limit = 10, tontineId } = req.query;
       const userId = queryUserId || (req.user && req.user.id);
 
       if (!userId) {
         return res.status(400).json(ERROR_RESPONSES.validation('User ID is required'));
       }
 
-      // Get contributions - include all statuses, default to 'Pending' if null
-      const [contributions] = await this.db.execute(`
-        SELECT c.*, t.name as tontine_name, 
-               COALESCE(c.payment_status, 'Pending') as payment_status
-        FROM contributions c
-        JOIN tontines t ON c.tontine_id = t.id
-        WHERE c.user_id = ?
-        ORDER BY c.contribution_date DESC, c.created_at DESC
-      `, [userId]);
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      const tontineFilter = tontineId ? ' AND t.id = ?' : '';
+      const tontineFilterP = tontineId ? ' AND p.tontine_id = ?' : '';
 
-      // Get loan payments from payments table (includes all statuses)
-      const [loanPayments] = await this.db.execute(`
-        SELECT p.*, l.amount as loan_amount, t.name as tontine_name,
-               COALESCE(p.status, 'pending') as payment_status
-        FROM payments p
-        JOIN loans l ON p.loan_id = l.id
-        JOIN tontines t ON l.tontine_id = t.id
-        WHERE p.user_id = ? AND p.payment_type = 'loan_payment'
-        ORDER BY p.created_at DESC
-      `, [userId]);
+      // Summary mode: return totals for all 3 types at once
+      if (type === 'summary') {
+        const baseParams = tontineId ? [userId, tontineId] : [userId];
+        const [[contribRow]] = await this.db.execute(
+          `SELECT COALESCE(SUM(c.amount),0) as total, COUNT(*) as count FROM contributions c JOIN tontines t ON c.tontine_id = t.id WHERE c.user_id = ?${tontineFilter}`,
+          baseParams
+        );
+        const [[loanRow]] = await this.db.execute(
+          `SELECT COALESCE(SUM(p.amount),0) as total, COUNT(*) as count FROM payments p LEFT JOIN tontines t ON p.tontine_id = t.id WHERE p.user_id = ? AND p.payment_type = 'loan_payment'${tontineFilterP}`,
+          baseParams
+        );
+        const [[penaltyRow]] = await this.db.execute(
+          `SELECT COALESCE(SUM(p.amount),0) as total, COUNT(*) as count FROM payments p LEFT JOIN tontines t ON p.tontine_id = t.id WHERE p.user_id = ? AND p.payment_type = 'penalty'${tontineFilterP}`,
+          baseParams
+        );
+        return res.json(SUCCESS_RESPONSES.ok({
+          totalContributions: parseFloat(contribRow.total),
+          totalLoanPayments: parseFloat(loanRow.total),
+          totalPenaltyPayments: parseFloat(penaltyRow.total),
+          totalTransactions: parseInt(contribRow.count) + parseInt(loanRow.count) + parseInt(penaltyRow.count)
+        }));
+      }
 
-      // Get penalty payments from payments table (includes all statuses)
-      const [penaltyPayments] = await this.db.execute(`
-        SELECT p.*, t.name as tontine_name, pen.reason
-        FROM payments p
-        LEFT JOIN tontines t ON p.tontine_id = t.id
-        LEFT JOIN penalties pen ON JSON_UNQUOTE(JSON_EXTRACT(p.payment_data, '$.penaltyId')) = pen.id OR JSON_UNQUOTE(JSON_EXTRACT(p.payment_data, '$.penalty_id')) = pen.id
-        WHERE p.user_id = ? AND p.payment_type = 'penalty'
-        ORDER BY p.created_at DESC
-      `, [userId]);
+      let data = [], total = 0;
+
+      if (type === 'contributions') {
+        const params = tontineId ? [userId, tontineId] : [userId];
+        [[{ total }]] = await this.db.execute(
+          `SELECT COUNT(*) as total FROM contributions c JOIN tontines t ON c.tontine_id = t.id WHERE c.user_id = ?${tontineFilter}`,
+          params
+        );
+        [data] = await this.db.execute(
+          `SELECT c.*, t.name as tontine_name, COALESCE(c.payment_status, 'Pending') as payment_status
+           FROM contributions c JOIN tontines t ON c.tontine_id = t.id
+           WHERE c.user_id = ?${tontineFilter}
+           ORDER BY c.contribution_date DESC, c.created_at DESC LIMIT ? OFFSET ?`,
+          [...params, parseInt(limit), offset]
+        );
+      } else if (type === 'loans') {
+        const params = tontineId ? [userId, tontineId] : [userId];
+        [[{ total }]] = await this.db.execute(
+          `SELECT COUNT(*) as total FROM payments p JOIN loans l ON p.loan_id = l.id JOIN tontines t ON l.tontine_id = t.id WHERE p.user_id = ? AND p.payment_type = 'loan_payment'${tontineFilter}`,
+          params
+        );
+        [data] = await this.db.execute(
+          `SELECT p.*, l.amount as loan_amount, t.name as tontine_name, COALESCE(p.status, 'pending') as payment_status
+           FROM payments p JOIN loans l ON p.loan_id = l.id JOIN tontines t ON l.tontine_id = t.id
+           WHERE p.user_id = ? AND p.payment_type = 'loan_payment'${tontineFilter}
+           ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+          [...params, parseInt(limit), offset]
+        );
+      } else if (type === 'penalties') {
+        const params = tontineId ? [userId, tontineId] : [userId];
+        [[{ total }]] = await this.db.execute(
+          `SELECT COUNT(*) as total FROM payments p LEFT JOIN tontines t ON p.tontine_id = t.id WHERE p.user_id = ? AND p.payment_type = 'penalty'${tontineFilter}`,
+          params
+        );
+        [data] = await this.db.execute(
+          `SELECT p.*, t.name as tontine_name, pen.reason
+           FROM payments p LEFT JOIN tontines t ON p.tontine_id = t.id
+           LEFT JOIN penalties pen ON JSON_UNQUOTE(JSON_EXTRACT(p.payment_data, '$.penaltyId')) = pen.id
+           WHERE p.user_id = ? AND p.payment_type = 'penalty'${tontineFilter}
+           ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
+          [...params, parseInt(limit), offset]
+        );
+      }
 
       return res.json(SUCCESS_RESPONSES.ok({
-        contributions,
-        loanPayments,
-        penaltyPayments
+        data,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
       }));
 
     } catch (error) {
