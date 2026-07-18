@@ -77,7 +77,7 @@
             >
               Join
             </button>
-            <span v-if="isMember(item.id)" class="text-green-600 text-sm font-medium">âœ“ Joined</span>
+            <span v-if="isMember(item.id)" class="text-green-600 text-sm font-medium">&#10004; Joined</span>
             <UDropdown v-if="isAdmin" :items="getTontineActions(item)" :popper="{ placement: 'bottom-end', strategy: 'fixed' }">
               <UButton color="gray" variant="ghost" size="xs">
                 <UIcon name="i-heroicons-ellipsis-vertical" class="w-4 h-4" />
